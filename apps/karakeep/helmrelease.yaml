@@ -22,11 +22,6 @@ spec:
     chrome:
       image: gcr.io/zenika-hub/alpine-chrome:123
     env:
-      - name: KARAKEEP_VERSION
-        valueFrom:
-        secretKeyRef:
-          name: karakeep-env
-          key: KARAKEEP_VERSION
       - name: NEXTAUTH_SECRET
         valueFrom:
           secretKeyRef:
