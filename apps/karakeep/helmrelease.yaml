@@ -15,9 +15,9 @@ spec:
   values:
     karakeep:
       image: ghcr.io/karakeep-app/karakeep:release
-      dataPVCSize: 10Gi
+      dataPVCSize: 2Gi
     meilisearch:
       image: getmeili/meilisearch:v1.13.3
-      dataPVCSize: 10Gi
+      dataPVCSize: 2Gi
     chrome:
       image: gcr.io/zenika-hub/alpine-chrome:123
