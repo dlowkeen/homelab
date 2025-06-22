@@ -5,20 +5,21 @@ metadata:
     namespace: karakeep
 type: Opaque
 stringData:
-    NEXTAUTH_SECRET: ENC[AES256_GCM,data:u4UJ4P8mdCa+Qo+RqxyPUHwDpOQxNzENCq1J3RR6Z0oJxc7GwiGL01ofPvWxr2+1,iv:+GgNII9yBUhxpLHAD8VyLHID/OpkS+mxmlbUDC9fjco=,tag:HZdw8AWVgIxLAA+IQaqPBw==,type:str]
-    MEILI_MASTER_KEY: ENC[AES256_GCM,data:MvNvAoqsJiO6n3mga+LEENMn+J2FEcGe9cKPppUYlFOAFrCJDOl7lVdyK94wQ9lb,iv:VbpDeXMDsw3C3LFTn8ZpYQ31GENO60+QheXNtAEs0zI=,tag:E9m6KMhQd7qUe1G9Lt30tA==,type:str]
+    NEXTAUTH_SECRET: ENC[AES256_GCM,data:OnGDaUPri3W2zcihuFu3oDmoMRe3LwSaVbggk66n+xouHZLjM9MlEef4p6yklScg,iv:Jvhk5HWmDwbCLC4H9tIGftFjeyi/p2H5XRcPu0U0RwA=,tag:ktcEJ9Q2YvXdedjZLMwSmA==,type:str]
+    MEILI_MASTER_KEY: ENC[AES256_GCM,data:1w/6UTKDCUqdoNu9/t+Xmn7kY2vwaLzafUH9B0LB6GUBHV1keJH/m72Zx/xAOtAK,iv:J0BaJ0qCRgd8CAqQJyRwdSW8Al90gRtcapHg5fJRhDw=,tag:eQvzv8BYz2NZIpPlhPiwPA==,type:str]
+    NEXT_PUBLIC_SECRET: ENC[AES256_GCM,data:WWGTXhWVr3PzmnuyVdUD/tD6qyrR7XQ/EVERBTl2NwBlE6FieOavCeo8moR0cjcb,iv:hVP58AcQeKNhWMx1fPG7hZCnxSWwgNuq/X8y2skaGLE=,tag:pgIrYTmGBdluwq38Pz6KUQ==,type:str]
 sops:
     age:
         - recipient: age1r8rgd3vycy6cfcsfrcmyyljf69dk953chhja2g87v0lm6d85xsgq0xcekk
           enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB1dVNUSXM4RTBQTnltaFE3
-            V3dDbUE5NjFBeVQxR0RhVGtUamVTdWplSnlRClNZeXYrdEducFdIbG9rZXJxR050
-            ZEFqMkd3RG80d3FvWDRMTjhBL1doQzQKLS0tIEc5ZGZGM1FTMFUzZWJGUlRDZ0dk
-            Q213OGliZng0ZzJLTlRlbEw5T2FLVmsKKm4W3PIFRwjUlAm0NfX5HlsH77WPewmy
-            Yi5v/oL4li/PksLeMaUAckCdoEeWLF/NdEXs2pxwlPX0WzJxVoqARg==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBpSXcrWUlDYTh5R0k5NTFv
+            MFdpaGdERXhIaHFwVHdVQlEyS3NybzVqY3hZCkVubm5Qb2pobUhEeVplNHo3em5P
+            ckozNnlneHNScjg4VEZRNkozb1VmODgKLS0tIGZPeWFmVDZVeVErUTgzbUVHN0Yx
+            REM4RUprSlEyM2xMZ3FEZTFiek1NWnMKP6nzic/LGB2Oc160s5kF8Vu3T6yAqq4W
+            x3YjliQt5e5oGQwQpC12sdiQnLfqSNYNHZ4G0u+QTYiPotJ86omcdA==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2025-06-22T05:31:43Z"
-    mac: ENC[AES256_GCM,data:5itHbiiq1hA5GEy5KMfUT5BmRHRXKVHP7rWnllxp9RMmF5WRr3SWj37j47d+4zrOBMuk8YfJV5kKmsVTU6NhrGGDFPH/SpgForAgdn+fcnS+NEgmapkSFWIOgcHcPs/d56k4Cyemo9knRDcGRP0Q0QzwCXTsrWW8vBR7jmQrJck=,iv:HS9DCWc4ZKrZn+nhRVhYGl4f3PSaMke8wT9JCqHS3KI=,tag:UOTA8up0YX0LXSUBI3pnNg==,type:str]
+    lastmodified: "2025-06-22T21:02:04Z"
+    mac: ENC[AES256_GCM,data:DKflu/ZS7edlG6MdJzgDm74R4zzPIme1n7FLQ+jDwwtCSm/3x1uiMI0HcswD6NHNCGPZCK7Qd43DtQFumJoz56dKAN/cB3LuXw9b8JyoY8IEne+MDqPxG2JDOpL/eXRtZTDYzPfyly99MkTJDOgkMISYXTmmDCe1ptJVT2ldjsc=,iv:3Qwq4c1c8rIRjpeExE1Ltmfa78pUApvxAGvlW2mi0hY=,tag:6/0Labkd8ID0W9nCdgB3QQ==,type:str]
     unencrypted_regex: ^(apiVersion|metadata|kind|type)$
     version: 3.10.2
