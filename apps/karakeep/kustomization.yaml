@@ -1,3 +1,4 @@
 resources:
   - helmrelease.yaml
   - namespace.yaml
+  - karakeep-env.enc.yaml

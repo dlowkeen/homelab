@@ -8,3 +8,25 @@ chrome:
 meilisearch:
   image: getmeili/meilisearch:v1.13.3
   dataPVCSize: 10Gi
+
+env:
+  - name: KARAKEEP_VERSION
+    valueFrom:
+      secretKeyRef:
+        name: karakeep-env
+        key: KARAKEEP_VERSION
+  - name: NEXTAUTH_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: karakeep-env
+        key: NEXTAUTH_SECRET
+  - name: MEILI_MASTER_KEY
+    valueFrom:
+      secretKeyRef:
+        name: karakeep-env
+        key: MEILI_MASTER_KEY
+  - name: NEXTAUTH_URL
+    valueFrom:
+      secretKeyRef:
+        name: karakeep-env
+        key: NEXTAUTH_URL
