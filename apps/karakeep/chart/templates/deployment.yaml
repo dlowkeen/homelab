@@ -24,9 +24,7 @@ spec:
               value: "http://localhost:9222"
             - name: DATA_DIR
               value: "/data"
-          envFrom:
-            - secretRef:
-                name: karakeep-env
+            {{- toYaml .Values.env | nindent 12 }}
           volumeMounts:
             - mountPath: /data
               name: data
@@ -44,9 +42,7 @@ spec:
           env:
             - name: MEILI_NO_ANALYTICS
               value: "true"
-          envFrom:
-            - secretRef:
-                name: karakeep-env
+            {{- toYaml .Values.env | nindent 12 }}
           volumeMounts:
             - mountPath: /meili_data
               name: meili
