@@ -24,6 +24,8 @@ spec:
               value: "http://chrome:9222"
             - name: DATA_DIR
               value: "/data"
+            - name: NEXTAUTH_URL
+              value: "http://karakeep:3000"
           envFrom:
             - secretRef:
                 name: karakeep-env
@@ -44,6 +46,8 @@ spec:
           env:
             - name: MEILI_NO_ANALYTICS
               value: "true"
+            - name: NEXTAUTH_URL
+              value: "http://karakeep:3000"
           envFrom:
             - secretRef:
                 name: karakeep-env

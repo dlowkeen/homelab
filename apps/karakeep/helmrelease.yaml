@@ -21,19 +21,3 @@ spec:
       dataPVCSize: 10Gi
     chrome:
       image: gcr.io/zenika-hub/alpine-chrome:123
-    env:
-      - name: NEXTAUTH_SECRET
-        valueFrom:
-          secretKeyRef:
-            name: karakeep-env
-            key: NEXTAUTH_SECRET
-      - name: MEILI_MASTER_KEY
-        valueFrom:
-          secretKeyRef:
-            name: karakeep-env
-            key: MEILI_MASTER_KEY
-      - name: NEXTAUTH_URL
-        valueFrom:
-          secretKeyRef:
-            name: karakeep-env
-            key: NEXTAUTH_URL
