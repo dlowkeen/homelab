@@ -3,3 +3,4 @@ resources:
   - gateway-api-crds.yaml
   - cilium-gateway.yaml
   - metallb.yaml
+  - ip-address-pool.yaml
