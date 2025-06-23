@@ -2,3 +2,4 @@ resources:
   - local-path-provisioner.yaml
   - gateway-api-crds.yaml
   - cilium-gateway.yaml
+  - metallb.yaml
