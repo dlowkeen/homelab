@@ -1,2 +1,3 @@
 resources:
   - local-path-provisioner.yaml
+  - cilium-gateway.yaml
