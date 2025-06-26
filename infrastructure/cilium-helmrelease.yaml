@@ -17,7 +17,7 @@ spec:
   chart:
     spec:
       chart: cilium
-      version: "1.18.0-dev"
+      version: "1.17.5"
       sourceRef:
         kind: HelmRepository
         name: cilium
@@ -31,19 +31,8 @@ spec:
     timeout: 10m
     crds: CreateReplace
   values:
-    # Enable Gateway API
-    gatewayAPI:
-      enabled: true
-    
-    # Enable Envoy for Gateway API
-    envoy:
-      enabled: true
-    
-    # Basic Cilium configuration
-    kubeProxyReplacement: false  # Since you mentioned kube-proxy is enabled
-    
-    # Enable required features for Gateway API
-    enableEnvoyConfig: true
+    # Basic Cilium configuration for single node cluster
+    kubeProxyReplacement: false  # Since kube-proxy is enabled
     
     # Operator configuration
     operator:
@@ -53,14 +42,11 @@ spec:
     # Agent configuration
     rollOutCiliumPods: true
     
-    # Enable L7 proxy for HTTP routing
-    l7Proxy: true
-    
     # Configure IPAM for your setup
     ipam:
       mode: "cluster-pool"
       operator:
-        clusterPoolIPv4PodCIDRList: ["10.244.0.0/16"]  # Adjust this to match your pod CIDR
+        clusterPoolIPv4PodCIDRList: ["10.244.0.0/16"]
     
     # Enable health checking
     healthChecking: true

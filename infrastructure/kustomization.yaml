@@ -1,5 +1,6 @@
 resources:
   - cilium-helmrelease.yaml
+  - nginx-ingress-helmrelease.yaml
   - local-path-provisioner.yaml
   - gateway-api-crds.yaml
   - cilium-gateway.yaml
