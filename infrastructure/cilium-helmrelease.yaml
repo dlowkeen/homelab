@@ -1,0 +1,81 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://helm.cilium.io/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: cilium
+      version: "1.18.0-dev"
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+        namespace: flux-system
+      interval: 12h
+  install:
+    timeout: 10m
+    replace: true
+    crds: CreateReplace
+  upgrade:
+    timeout: 10m
+    crds: CreateReplace
+  values:
+    # Enable Gateway API
+    gatewayAPI:
+      enabled: true
+    
+    # Enable Envoy for Gateway API
+    envoy:
+      enabled: true
+    
+    # Basic Cilium configuration
+    kubeProxyReplacement: false  # Since you mentioned kube-proxy is enabled
+    
+    # Enable required features for Gateway API
+    enableEnvoyConfig: true
+    
+    # Operator configuration
+    operator:
+      replicas: 1
+      rollOutPods: true
+    
+    # Agent configuration
+    rollOutCiliumPods: true
+    
+    # Enable L7 proxy for HTTP routing
+    l7Proxy: true
+    
+    # Configure IPAM for your setup
+    ipam:
+      mode: "cluster-pool"
+      operator:
+        clusterPoolIPv4PodCIDRList: ["10.244.0.0/16"]  # Adjust this to match your pod CIDR
+    
+    # Enable health checking
+    healthChecking: true
+    
+    # Configure for single node cluster
+    autoDirectNodeRoutes: false
+    
+    # Enable metrics if needed
+    prometheus:
+      enabled: false
+    
+    # Enable Hubble for observability (optional)
+    hubble:
+      enabled: true
+      relay:
+        enabled: false  # Disable relay for single node
+      ui:
+        enabled: false  # Disable UI for single node 
