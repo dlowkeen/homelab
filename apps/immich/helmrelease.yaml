@@ -1,0 +1,120 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: immich
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: oci://ghcr.io/immich-app/immich-charts
+  type: oci
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: immich
+  namespace: immich
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: immich
+      version: "0.9.3"  # Latest stable version
+      sourceRef:
+        kind: HelmRepository
+        name: immich
+        namespace: flux-system
+      interval: 12h
+  install:
+    timeout: 10m
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    timeout: 10m
+    crds: CreateReplace
+  values:
+    # Immich configuration
+    image:
+      tag: "release"  # Use latest release tag
+    
+    # Server configuration
+    server:
+      enabled: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    
+    # Machine learning service
+    machinelearning:
+      enabled: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+    
+    # Redis configuration
+    redis:
+      enabled: true
+      auth:
+        enabled: false  # Disable auth for simplicity in homelab
+      master:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+    
+    # PostgreSQL configuration
+    postgresql:
+      enabled: true
+      auth:
+        database: immich
+        username: immich
+        existingSecret: immich-database-secret
+        secretKeys:
+          adminPasswordKey: DB_PASSWORD
+          userPasswordKey: DB_PASSWORD
+      primary:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        persistence:
+          enabled: true
+          size: 10Gi
+    
+    # Persistence for uploads/library
+    persistence:
+      library:
+        enabled: true
+        size: 50Gi
+        storageClass: "local-path"  # Explicit storage class
+        accessMode: ReadWriteOnce
+    
+    # Environment variables from secret
+    envFrom:
+      - secretRef:
+          name: immich-database-secret
+    
+    # Additional environment variables
+    env:
+      DB_HOSTNAME: immich-postgresql
+      REDIS_HOSTNAME: immich-redis-master
+      LOG_LEVEL: info
+      
+    # Service configuration
+    service:
+      server:
+        type: ClusterIP
+        port: 2283 
