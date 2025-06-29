@@ -74,4 +74,5 @@ spec:
       library:
         enabled: true
         size: 50Gi
-        storageClass: "local-path" 
+        storageClass: "local-path"
+        accessMode: ReadWriteOnce 
