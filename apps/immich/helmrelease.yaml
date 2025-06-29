@@ -69,10 +69,8 @@ spec:
       auth:
         enabled: false
     
-    # Configure persistence for uploads
-    persistence:
-      library:
-        enabled: true
-        size: 50Gi
-        storageClass: "local-path"
-        accessMode: ReadWriteOnce 
+    # Configure persistence for uploads - use existing claim
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library 
