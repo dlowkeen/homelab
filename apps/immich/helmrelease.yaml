@@ -41,27 +41,17 @@ spec:
       - secretRef:
           name: immich-database-secret
     
-    # Additional environment variables
+    # Additional environment variables for database and redis connectivity
     env:
       DB_HOSTNAME: immich-postgresql
+      DB_PORT: "5432"
       REDIS_HOSTNAME: immich-redis-master
+      REDIS_PORT: "6379"
       LOG_LEVEL: info
     
-    # Enable built-in PostgreSQL
+    # Disable built-in PostgreSQL (deprecated)
     postgresql:
-      enabled: true
-      auth:
-        database: immich
-        username: immich
-        existingSecret: immich-database-secret
-        secretKeys:
-          adminPasswordKey: DB_PASSWORD
-          userPasswordKey: DB_PASSWORD
-      primary:
-        persistence:
-          enabled: true
-          size: 10Gi
-          storageClass: "local-path"
+      enabled: false
     
     # Enable built-in Redis
     redis:
