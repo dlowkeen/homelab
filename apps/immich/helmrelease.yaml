@@ -36,13 +36,25 @@ spec:
     image:
       tag: "release"
     
-    # Environment variables from secret
-    envFrom:
-      - secretRef:
-          name: immich-database-secret
-    
-    # Additional environment variables for database and redis connectivity
+    # All environment variables with explicit secret references
     env:
+      # Database credentials from secret
+      DB_USERNAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_USERNAME
+      DB_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_PASSWORD
+      DB_DATABASE_NAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_DATABASE_NAME
+      # Connection details
       DB_HOSTNAME: immich-postgresql
       DB_PORT: "5432"
       REDIS_HOSTNAME: immich-redis-master

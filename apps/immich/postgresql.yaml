@@ -31,9 +31,15 @@ spec:
         image: tensorchord/pgvecto-rs:pg14-v0.2.0
         env:
         - name: POSTGRES_DB
-          value: "immich"
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_DATABASE_NAME
         - name: POSTGRES_USER
-          value: "immich"
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_USERNAME
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
