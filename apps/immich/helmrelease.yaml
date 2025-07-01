@@ -70,9 +70,56 @@ spec:
       enabled: true
       auth:
         enabled: false
+      master:
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
     
     # Configure persistence for uploads - use existing claim
     immich:
       persistence:
         library:
-          existingClaim: immich-library-bigboi 
+          existingClaim: immich-library-bigboi
+    
+    # Resource limits for Immich server components
+    server:
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
+    
+    web:
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    
+    microservices:
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "6Gi"
+          cpu: "2000m"
+    
+    machine-learning:
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "8Gi"
+          cpu: "2000m"
+      # Disable ML initially to save resources - you can enable later
+      enabled: false 
