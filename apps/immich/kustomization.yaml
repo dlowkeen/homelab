@@ -7,7 +7,6 @@ resources:
   - db-secret.enc.yaml
   - postgresql.yaml
   - pvc.yaml
-  - bigboi-storage.yaml
   - pvc-bigboi.yaml
   - helmrelease.yaml
   - ingress.yaml
