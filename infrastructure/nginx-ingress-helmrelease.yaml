@@ -46,11 +46,20 @@ spec:
       ingressClassResource:
         default: true
       
-      # Configuration for proper forwarding
+      # Configuration for proper forwarding and large file uploads
       config:
         use-forwarded-headers: "true"
         compute-full-forwarded-for: "true"
         use-proxy-protocol: "false"
+        # Allow large file uploads (50GB max)
+        client-max-body-size: "50g"
+        # Increase timeouts for large uploads
+        proxy-connect-timeout: "600"
+        proxy-send-timeout: "600"
+        proxy-read-timeout: "600"
+        # Increase buffer sizes
+        client-body-buffer-size: "128k"
+        proxy-buffer-size: "4k"
       
       # Resource requests for single node
       resources:
