@@ -60,6 +60,8 @@ spec:
       REDIS_HOSTNAME: immich-redis-master
       REDIS_PORT: "6379"
       LOG_LEVEL: info
+      # HTTPS configuration
+      IMMICH_SERVER_URL: https://immich.donovanlowkeen.com
     
     # Disable built-in PostgreSQL (deprecated)
     postgresql:
