@@ -1,0 +1,157 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: homelab.critical
+    rules:
+    # OOMKilled alerts
+    - alert: PodOOMKilled
+      expr: increase(kube_pod_container_status_restarts_total[5m]) > 0 and on(pod, namespace) kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} > 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was OOMKilled"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was killed due to out of memory. This indicates the pod needs more memory limits or there's a memory leak."
+    
+    # High memory usage
+    - alert: HighMemoryUsage
+      expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High memory usage on {{ $labels.instance }}"
+        description: "Memory usage is above 90% for more than 5 minutes on {{ $labels.instance }}"
+    
+    # High CPU usage
+    - alert: HighCPUUsage
+      expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High CPU usage on {{ $labels.instance }}"
+        description: "CPU usage is above 85% for more than 5 minutes on {{ $labels.instance }}"
+    
+    # Disk space critical
+    - alert: DiskSpaceCritical
+      expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) < 0.1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Disk space critical on {{ $labels.instance }}"
+        description: "Disk usage is above 90% on {{ $labels.instance }} filesystem {{ $labels.mountpoint }}"
+    
+    # Node down
+    - alert: NodeDown
+      expr: up{job="node-exporter"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Node {{ $labels.instance }} is down"
+        description: "Node {{ $labels.instance }} has been down for more than 1 minute"
+    
+    # Pod crash looping
+    - alert: PodCrashLooping
+      expr: increase(kube_pod_container_status_restarts_total[5m]) > 3
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} is crash looping"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 3 times in the last 5 minutes"
+
+  - name: homelab.warning
+    rules:
+    # High memory usage warning
+    - alert: HighMemoryUsageWarning
+      expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage warning on {{ $labels.instance }}"
+        description: "Memory usage is above 80% for more than 5 minutes on {{ $labels.instance }}"
+    
+    # High CPU usage warning
+    - alert: HighCPUUsageWarning
+      expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 75
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage warning on {{ $labels.instance }}"
+        description: "CPU usage is above 75% for more than 5 minutes on {{ $labels.instance }}"
+    
+    # Disk space warning
+    - alert: DiskSpaceWarning
+      expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) < 0.2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Disk space warning on {{ $labels.instance }}"
+        description: "Disk usage is above 80% on {{ $labels.instance }} filesystem {{ $labels.mountpoint }}"
+    
+    # Pod not ready
+    - alert: PodNotReady
+      expr: kube_pod_status_ready{condition="false"} == 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod {{ $labels.pod }} not ready"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 5 minutes"
+
+  - name: homelab.services
+    rules:
+    # Immich service down
+    - alert: ImmichServiceDown
+      expr: up{job="immich"} == 0 or absent(up{job="immich"})
+      for: 2m
+      labels:
+        severity: critical
+        service: immich
+      annotations:
+        summary: "Immich service is down"
+        description: "Immich service has been down for more than 2 minutes"
+    
+    # Karakeep service down
+    - alert: KarakeepServiceDown
+      expr: up{job="karakeep"} == 0 or absent(up{job="karakeep"})
+      for: 2m
+      labels:
+        severity: critical
+        service: karakeep
+      annotations:
+        summary: "Karakeep service is down"
+        description: "Karakeep service has been down for more than 2 minutes"
+    
+    # Certificate expiry
+    - alert: CertificateExpiringSoon
+      expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Certificate expiring soon for {{ $labels.instance }}"
+        description: "Certificate for {{ $labels.instance }} expires in less than 30 days"
+    
+    # Prometheus target down
+    - alert: PrometheusTargetDown
+      expr: up == 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Prometheus target {{ $labels.instance }} is down"
+        description: "Prometheus target {{ $labels.instance }} for job {{ $labels.job }} has been down for more than 5 minutes" 

@@ -1,0 +1,177 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "58.2.2"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 12h
+  install:
+    timeout: 10m
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    timeout: 10m
+    crds: CreateReplace
+  values:
+    # Global settings
+    global:
+      rbac:
+        create: true
+    
+    # Prometheus configuration
+    prometheus:
+      prometheusSpec:
+        # Retention policy
+        retention: 30d
+        retentionSize: 10GB
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 500m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+        
+        # Storage configuration
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 20Gi
+        
+        # Enable service monitors for existing services
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        
+        # External URL for proper links
+        externalUrl: https://grafana.donovanlowkeen.com/prometheus
+    
+    # Grafana configuration
+    grafana:
+      # Admin credentials from encrypted secret
+      admin:
+        existingSecret: "monitoring-secrets"
+        userKey: "admin_user"
+        passwordKey: "grafana_admin_password"
+      
+      # Persistence
+      persistence:
+        enabled: true
+        type: pvc
+        storageClassName: local-path
+        accessModes:
+          - ReadWriteOnce
+        size: 5Gi
+      
+      # Resource limits
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 500m
+      
+      # Grafana configuration
+      grafana.ini:
+        server:
+          root_url: https://grafana.donovanlowkeen.com
+          serve_from_sub_path: false
+        security:
+          admin_user: admin
+        smtp:
+          enabled: false  # Will configure later
+      
+      # Enable useful plugins
+      plugins:
+        - grafana-piechart-panel
+        - grafana-worldmap-panel
+        - grafana-clock-panel
+    
+    # AlertManager configuration
+    alertmanager:
+      alertmanagerSpec:
+        # Resource limits
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 100m
+          limits:
+            memory: 256Mi
+            cpu: 200m
+        
+        # Storage
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 5Gi
+        
+        # External URL
+        externalUrl: https://grafana.donovanlowkeen.com/alertmanager
+        
+        # Use custom configuration
+        configSecret: alertmanager-config
+        
+        # Mount secrets for SMTP password
+        secrets:
+          - monitoring-secrets
+    
+    # Node Exporter - collects host metrics
+    nodeExporter:
+      enabled: true
+      
+    # Kube State Metrics - collects k8s object metrics
+    kubeStateMetrics:
+      enabled: true
+    
+    # Prometheus Operator
+    prometheusOperator:
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 100m
+        limits:
+          memory: 256Mi
+          cpu: 200m
+    
+    # Default rules - includes OOMKilled alerts
+    defaultRules:
+      create: true
+      rules:
+        alertmanager: true
+        etcd: true
+        general: true
+        k8s: true
+        kubeApiserver: true
+        kubeApiserverAvailability: true
+        kubeApiserverSlos: true
+        kubelet: true
+        kubePrometheusGeneral: true
+        kubePrometheusNodeRecording: true
+        kubernetesAbsent: true
+        kubernetesApps: true
+        kubernetesResources: true
+        kubernetesStorage: true
+        kubernetesSystem: true
+        node: true
+        prometheus: true
+        prometheusOperator: true 

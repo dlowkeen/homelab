@@ -1,0 +1,8 @@
+resources:
+  - namespace.yaml
+  - helmrepository.yaml
+  - helmrelease.yaml
+  - grafana-ingress.yaml
+  - alertmanager-config.yaml
+  - custom-alerts.yaml
+  - monitoring-secrets.enc.yaml 
