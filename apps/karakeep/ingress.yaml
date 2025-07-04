@@ -5,9 +5,15 @@ metadata:
   namespace: karakeep
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Certificate manager annotations
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - karakeep.donovanlowkeen.com
+      secretName: karakeep-tls
   rules:
     - host: karakeep.donovanlowkeen.com
       http:
