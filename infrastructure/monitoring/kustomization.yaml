@@ -6,6 +6,8 @@ resources:
   - helmrepository.yaml
   - helmrelease.yaml
   - grafana-ingress.yaml
+  - prometheus-ingress.yaml
+  - alertmanager-ingress.yaml
   - alertmanager-config.yaml
   - monitoring-secrets.enc.yaml
   - custom-alerts.yaml  # Add back after kube-prometheus-stack is deployed 
