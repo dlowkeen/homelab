@@ -34,7 +34,7 @@ spec:
   values:
     # Required: Set image tag
     image:
-      tag: "v1.141.1"
+      tag: "release"
     
     # All environment variables with explicit secret references
     env:
