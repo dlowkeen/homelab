@@ -1,0 +1,127 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: immich
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: oci://ghcr.io/immich-app/immich-charts
+  type: oci
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: immich
+  # namespace will be set by overlay
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: immich
+      version: "0.9.3"
+      sourceRef:
+        kind: HelmRepository
+        name: immich
+        namespace: flux-system
+      interval: 12h
+  install:
+    timeout: 10m
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    timeout: 10m
+    crds: CreateReplace
+  values:
+    # Required: Set image tag
+    image:
+      tag: "release"
+    
+    # All environment variables with explicit secret references
+    env:
+      # Database credentials from secret
+      DB_USERNAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_USERNAME
+      DB_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_PASSWORD
+      DB_DATABASE_NAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_DATABASE_NAME
+      # Connection details
+      DB_HOSTNAME: immich-postgresql
+      DB_PORT: "5432"
+      REDIS_HOSTNAME: immich-redis-master
+      REDIS_PORT: "6379"
+      LOG_LEVEL: info
+      # HTTPS configuration
+      IMMICH_SERVER_URL: https://immich.donovanlowkeen.com
+    
+    # Disable built-in PostgreSQL (deprecated)
+    postgresql:
+      enabled: false
+    
+    # Enable built-in Redis
+    redis:
+      enabled: true
+      auth:
+        enabled: false
+      master:
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+    
+    # Configure persistence for uploads - use existing claim
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library-bigboi
+    
+    # Resource limits for Immich server components
+    server:
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
+    
+    web:
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+    
+    microservices:
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "6Gi"
+          cpu: "2000m"
+    
+    machine-learning:
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "8Gi"
+          cpu: "2000m"
+      # Disable ML initially to save resources - you can enable later
+      enabled: false 

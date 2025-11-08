@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base contains only generic/shared resources
+# Environment-specific resources (namespace, secrets, ingress, PVCs) are defined in overlays
+resources:
+  - postgresql.yaml
+  - helmrelease.yaml
+

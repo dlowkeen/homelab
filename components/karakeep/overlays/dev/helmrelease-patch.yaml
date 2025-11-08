@@ -1,0 +1,12 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: karakeep
+  namespace: karakeep-dev
+spec:
+  values:
+    karakeep:
+      dataPVCSize: 2Gi
+    meilisearch:
+      dataPVCSize: 2Gi
+
