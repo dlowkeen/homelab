@@ -11,3 +11,7 @@ resources:
   - helmrelease.yaml
   - ingress.yaml
   - redis.yaml
+
+# Configuration files referenced by HelmRelease postRenderers
+configurations:
+  - env-patch.yaml

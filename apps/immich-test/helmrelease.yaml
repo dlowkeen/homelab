@@ -29,6 +29,11 @@ spec:
             newTag: v1.119.0
           - name: ghcr.io/immich-app/immich-machine-learning
             newTag: v1.119.0
+        patches:
+          - target:
+              kind: Deployment
+              name: immich-server
+            path: env-patch.yaml
   values:
     # Required: Set image tag
     image:
