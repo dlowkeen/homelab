@@ -8,5 +8,5 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 3Gi  # Small size for test environment
-  storageClassName: local-path  # Use local-path instead of bigboi-storage 
+      storage: 2Gi  # Small size for test environment
+  storageClassName: local-path
