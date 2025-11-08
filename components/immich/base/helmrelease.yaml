@@ -33,8 +33,8 @@ spec:
     crds: CreateReplace
   values:
     # Required: Set image tag
-    image:
-      tag: "release"
+    # image:
+    #   tag: "release"
     
     # All environment variables with explicit secret references
     env:
