@@ -63,10 +63,6 @@ spec:
       # HTTPS configuration
       IMMICH_SERVER_URL: https://immich.donovanlowkeen.com
     
-    # Disable built-in PostgreSQL (deprecated)
-    postgresql:
-      enabled: false
-    
     # Enable built-in Redis
     redis:
       enabled: true
