@@ -26,47 +26,94 @@ spec:
     image:
       tag: "v1.119.0"
     
-    # All environment variables with explicit secret references
-    env:
-      # Database credentials from secret
-      DB_USERNAME:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret
-            key: DB_USERNAME
-      DB_PASSWORD:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret
-            key: DB_PASSWORD
-      DB_DATABASE_NAME:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret
-            key: DB_DATABASE_NAME
-      # Connection details
-      DB_HOSTNAME: immich-postgresql
-      DB_PORT: "5432"
-      REDIS_HOSTNAME: immich-redis-master
-      REDIS_PORT: "6379"
-      LOG_LEVEL: info
-      # HTTPS configuration
-      IMMICH_SERVER_URL: https://immich-test.donovanlowkeen.com
-    
-    # Configure persistence for uploads - use existing claim
-    immich:
-      persistence:
-        library:
-          existingClaim: immich-library-bigboi
-    
-    # Resource limits for Immich server components
+    # Configure each component explicitly with image and env
     server:
+      image:
+        tag: "v1.119.0"
       resources:
         requests:
           memory: "1Gi"
           cpu: "500m"
         limits:
           memory: "4Gi"
+          cpu: "2000m"
+      env:
+        DB_HOSTNAME:
+          value: immich-postgresql
+        DB_PORT:
+          value: "5432"
+        DB_USERNAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_USERNAME
+        DB_PASSWORD:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_PASSWORD
+        DB_DATABASE_NAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_DATABASE_NAME
+        REDIS_HOSTNAME:
+          value: immich-redis-master
+        REDIS_PORT:
+          value: "6379"
+        IMMICH_SERVER_URL:
+          value: https://immich-test.donovanlowkeen.com
+        LOG_LEVEL:
+          value: info
+    
+    microservices:
+      image:
+        tag: "v1.119.0"
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "6Gi"
+          cpu: "2000m"
+      env:
+        DB_HOSTNAME:
+          value: immich-postgresql
+        DB_PORT:
+          value: "5432"
+        DB_USERNAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_USERNAME
+        DB_PASSWORD:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_PASSWORD
+        DB_DATABASE_NAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_DATABASE_NAME
+        REDIS_HOSTNAME:
+          value: immich-redis-master
+        REDIS_PORT:
+          value: "6379"
+        LOG_LEVEL:
+          value: info
+    
+    machine-learning:
+      image:
+        tag: "v1.119.0"
+      # Disable ML initially to save resources - you can enable later
+      enabled: false
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "8Gi"
           cpu: "2000m"
     
     web:
@@ -78,22 +125,8 @@ spec:
           memory: "512Mi"
           cpu: "500m"
     
-    microservices:
-      resources:
-        requests:
-          memory: "1Gi"
-          cpu: "500m"
-        limits:
-          memory: "6Gi"
-          cpu: "2000m"
-    
-    machine-learning:
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "500m"
-        limits:
-          memory: "8Gi"
-          cpu: "2000m"
-      # Disable ML initially to save resources - you can enable later
-      enabled: false 
+    # Configure persistence for uploads - use existing claim
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library-bigboi 
