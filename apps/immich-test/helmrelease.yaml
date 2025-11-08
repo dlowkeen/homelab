@@ -33,7 +33,61 @@ spec:
           - target:
               kind: Deployment
               name: immich-server
-            path: env-patch.yaml
+            patch: |-
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_HOSTNAME
+                  value: immich-postgresql
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PORT
+                  value: "5432"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_USERNAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_PASSWORD
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_DATABASE_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_DATABASE_NAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_HOSTNAME
+                  value: immich-redis-master
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_PORT
+                  value: "6379"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: IMMICH_SERVER_URL
+                  value: https://immich-test.donovanlowkeen.com
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: LOG_LEVEL
+                  value: info
   values:
     # Required: Set image tag
     image:
