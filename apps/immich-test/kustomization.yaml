@@ -10,3 +10,4 @@ resources:
   - pvc-bigboi.yaml
   - helmrelease.yaml
   - ingress.yaml
+  - redis.yaml
