@@ -63,12 +63,6 @@ spec:
       # HTTPS configuration
       IMMICH_SERVER_URL: https://immich.donovanlowkeen.com
     
-    # Enable built-in Redis (for older chart versions)
-    redis:
-      enabled: true
-      auth:
-        enabled: false
-    
     # Configure persistence for uploads - use existing claim
     immich:
       persistence:
