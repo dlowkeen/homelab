@@ -58,16 +58,6 @@ spec:
     machine-learning:
       enabled: false
     
-    redis:
-      master:
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "50m"
-          limits:
-            memory: "256Mi"
-            cpu: "250m"
-    
     immich:
       persistence:
         library:
