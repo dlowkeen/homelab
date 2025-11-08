@@ -5,13 +5,15 @@ metadata:
   namespace: immich-dev
 spec:
   values:
-    # Override image tag for testing specific version
+    # Set global image configuration
     image:
+      repository: ghcr.io/immich-app/immich-server
       tag: "v1.135.3"
     
-    # Explicitly set image tag for all components
+    # Explicitly set image for all components
     server:
       image:
+        repository: ghcr.io/immich-app/immich-server
         tag: "v1.135.3"
       resources:
         requests:
@@ -32,6 +34,7 @@ spec:
     
     microservices:
       image:
+        repository: ghcr.io/immich-app/immich-server
         tag: "v1.135.3"
       resources:
         requests:
@@ -43,6 +46,7 @@ spec:
     
     machine-learning:
       image:
+        repository: ghcr.io/immich-app/immich-machine-learning
         tag: "v1.135.3"
       enabled: false
     
