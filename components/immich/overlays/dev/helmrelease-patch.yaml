@@ -9,26 +9,10 @@ spec:
     image:
       tag: "v1.135.3"
     
-    env:
-      DB_USERNAME:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret-dev
-            key: DB_USERNAME
-      DB_PASSWORD:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret-dev
-            key: DB_PASSWORD
-      DB_DATABASE_NAME:
-        valueFrom:
-          secretKeyRef:
-            name: immich-database-secret-dev
-            key: DB_DATABASE_NAME
-      IMMICH_SERVER_URL: https://immich-dev.donovanlowkeen.com
-    
-    # Reduced resources for dev
+    # Explicitly set image tag for all components
     server:
+      image:
+        tag: "v1.135.3"
       resources:
         requests:
           memory: "256Mi"
@@ -47,6 +31,8 @@ spec:
           cpu: "250m"
     
     microservices:
+      image:
+        tag: "v1.135.3"
       resources:
         requests:
           memory: "256Mi"
@@ -56,7 +42,27 @@ spec:
           cpu: "500m"
     
     machine-learning:
+      image:
+        tag: "v1.135.3"
       enabled: false
+    
+    env:
+      DB_USERNAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret-dev
+            key: DB_USERNAME
+      DB_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret-dev
+            key: DB_PASSWORD
+      DB_DATABASE_NAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret-dev
+            key: DB_DATABASE_NAME
+      IMMICH_SERVER_URL: https://immich-dev.donovanlowkeen.com
     
     immich:
       persistence:
