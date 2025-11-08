@@ -60,6 +60,10 @@ spec:
       enabled: false
     
     env:
+      # Override Redis hostname to use our deployed Redis instead of Valkey
+      REDIS_HOSTNAME: immich-redis-master
+      REDIS_PORT: "6379"
+      # Override database credentials
       DB_USERNAME:
         valueFrom:
           secretKeyRef:
