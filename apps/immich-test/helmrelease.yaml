@@ -34,7 +34,31 @@ spec:
     image:
       tag: "v1.119.0"
     
-    # Configure each component explicitly with image and env
+    # Global env vars - use simple key-value for literals
+    env:
+      DB_HOSTNAME: immich-postgresql
+      DB_PORT: "5432"
+      DB_USERNAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_USERNAME
+      DB_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_PASSWORD
+      DB_DATABASE_NAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_DATABASE_NAME
+      REDIS_HOSTNAME: immich-redis-master
+      REDIS_PORT: "6379"
+      IMMICH_SERVER_URL: https://immich-test.donovanlowkeen.com
+      LOG_LEVEL: info
+    
+    # Component-specific settings
     server:
       image:
         tag: "v1.119.0"
@@ -45,34 +69,6 @@ spec:
         limits:
           memory: "4Gi"
           cpu: "2000m"
-      env:
-        DB_HOSTNAME:
-          value: immich-postgresql
-        DB_PORT:
-          value: "5432"
-        DB_USERNAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_USERNAME
-        DB_PASSWORD:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_PASSWORD
-        DB_DATABASE_NAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_DATABASE_NAME
-        REDIS_HOSTNAME:
-          value: immich-redis-master
-        REDIS_PORT:
-          value: "6379"
-        IMMICH_SERVER_URL:
-          value: https://immich-test.donovanlowkeen.com
-        LOG_LEVEL:
-          value: info
     
     microservices:
       image:
@@ -84,32 +80,6 @@ spec:
         limits:
           memory: "6Gi"
           cpu: "2000m"
-      env:
-        DB_HOSTNAME:
-          value: immich-postgresql
-        DB_PORT:
-          value: "5432"
-        DB_USERNAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_USERNAME
-        DB_PASSWORD:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_PASSWORD
-        DB_DATABASE_NAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_DATABASE_NAME
-        REDIS_HOSTNAME:
-          value: immich-redis-master
-        REDIS_PORT:
-          value: "6379"
-        LOG_LEVEL:
-          value: info
     
     machine-learning:
       image:
