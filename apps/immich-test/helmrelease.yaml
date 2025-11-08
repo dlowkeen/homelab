@@ -4,7 +4,7 @@ metadata:
   name: immich
   namespace: immich-test
 spec:
-  interval: 30m
+  interval: 5m
   chart:
     spec:
       chart: immich
@@ -21,6 +21,14 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
+  # Force image tags to v1.119.0 using postRenderers
+  postRenderers:
+    - kustomize:
+        images:
+          - name: ghcr.io/immich-app/immich-server
+            newTag: v1.119.0
+          - name: ghcr.io/immich-app/immich-machine-learning
+            newTag: v1.119.0
   values:
     # Required: Set image tag
     image:
