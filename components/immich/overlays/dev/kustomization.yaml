@@ -8,6 +8,7 @@ resources:
   - db-secret-dev.enc.yaml
   - pvc.yaml
   - ingress.yaml
+  - redis.yaml
 
 # Override namespace for all resources
 namespace: immich-dev
