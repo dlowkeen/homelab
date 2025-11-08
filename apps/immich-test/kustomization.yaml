@@ -6,7 +6,6 @@ resources:
   - namespace.yaml
   - db-secret.enc.yaml
   - postgresql.yaml
-  - pvc.yaml
   - pvc-bigboi.yaml
   - helmrelease.yaml
   - ingress.yaml
