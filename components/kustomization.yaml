@@ -3,5 +3,5 @@ kind: Kustomization
 
 resources:
   # Development environments
-  # - immich/sync-dev.yaml
+  - immich/sync-dev.yaml
   - karakeep/sync-dev.yaml

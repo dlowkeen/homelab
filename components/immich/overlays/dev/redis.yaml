@@ -7,11 +7,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: immich-redis
+      app: redis
   template:
     metadata:
       labels:
-        app: immich-redis
+        app: redis
     spec:
       containers:
       - name: redis
@@ -20,11 +20,11 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 250m
+            cpu: 100m
             memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
@@ -33,9 +33,21 @@ metadata:
   namespace: immich-dev
 spec:
   selector:
-    app: immich-redis
+    app: redis
   ports:
   - port: 6379
     targetPort: 6379
   type: ClusterIP
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-redis-headless
+  namespace: immich-dev
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379

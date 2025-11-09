@@ -1,30 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Reference base configuration (generic HelmRelease and PostgreSQL structure)
+namespace: immich-dev
+
 resources:
   - ../../base
   - namespace.yaml
   - db-secret-dev.enc.yaml
-  - pvc.yaml
+  - pvc-postgresql.yaml
+  - pvc-bigboi.yaml
   - ingress.yaml
   - redis.yaml
-
-# Override namespace for all resources
-namespace: immich-dev
-
-# Strategic merge patches to customize for dev environment
-patches:
-  - path: postgresql-deployment-patch.yaml
-    target:
-      kind: Deployment
-      name: immich-postgresql
-  - path: postgresql-service-patch.yaml
-    target:
-      kind: Service
-      name: immich-postgresql
-  - path: helmrelease-patch.yaml
-    target:
-      kind: HelmRelease
-      name: immich
-
