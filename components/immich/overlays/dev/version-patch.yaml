@@ -1,0 +1,16 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: immich
+spec:
+  chart:
+    spec:
+      version: "0.9.3"
+  postRenderers:
+    - kustomize:
+        images:
+          - name: ghcr.io/immich-app/immich-server
+            newTag: v1.119.0
+          - name: ghcr.io/immich-app/immich-machine-learning
+            newTag: v1.119.0
+

@@ -18,7 +18,7 @@ spec:
   chart:
     spec:
       chart: immich
-      version: "0.9.3"
+      # version will be set by overlay
       sourceRef:
         kind: HelmRepository
         name: immich
@@ -31,14 +31,9 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
-  # Force image tags using postRenderers - will be overridden by overlay
+  # postRenderers for env vars (image tags will be set by overlay)
   postRenderers:
     - kustomize:
-        images:
-          - name: ghcr.io/immich-app/immich-server
-            newTag: v1.119.0
-          - name: ghcr.io/immich-app/immich-machine-learning
-            newTag: v1.119.0
         patches:
           - target:
               kind: Deployment
