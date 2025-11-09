@@ -10,5 +10,5 @@ spec:
   persistentVolumeReclaimPolicy: Delete
   storageClassName: local-path
   hostPath:
-    path: /tmp/immich-test-library
+    path: /mnt/immich-test-library
     type: DirectoryOrCreate
