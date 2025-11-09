@@ -13,45 +13,26 @@ spec:
             newTag: v1.119.0
           - name: ghcr.io/immich-app/immich-machine-learning
             newTag: v1.119.0
-        patches:
-          - target:
-              kind: Deployment
-              name: immich-server
-            patch: |
-              apiVersion: apps/v1
-              kind: Deployment
-              metadata:
-                name: immich-server
-              spec:
-                template:
-                  spec:
-                    containers:
-                      - name: immich
-                        env:
-                          - name: DB_HOSTNAME
-                            value: immich-postgresql
-                          - name: DB_PORT
-                            value: "5432"
-                          - name: DB_USERNAME
-                            valueFrom:
-                              secretKeyRef:
-                                name: immich-database-secret
-                                key: DB_USERNAME
-                          - name: DB_PASSWORD
-                            valueFrom:
-                              secretKeyRef:
-                                name: immich-database-secret
-                                key: DB_PASSWORD
-                          - name: DB_DATABASE_NAME
-                            valueFrom:
-                              secretKeyRef:
-                                name: immich-database-secret
-                                key: DB_DATABASE_NAME
-                          - name: REDIS_HOSTNAME
-                            value: immich-redis-master
-                          - name: REDIS_PORT
-                            value: "6379"
-                          - name: IMMICH_SERVER_URL
-                            value: https://immich-dev.donovanlowkeen.com
-                          - name: LOG_LEVEL
-                            value: info
+  values:
+    env:
+      DB_HOSTNAME: immich-postgresql
+      DB_PORT: "5432"
+      DB_USERNAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_USERNAME
+      DB_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_PASSWORD
+      DB_DATABASE_NAME:
+        valueFrom:
+          secretKeyRef:
+            name: immich-database-secret
+            key: DB_DATABASE_NAME
+      REDIS_HOSTNAME: immich-redis-master
+      REDIS_PORT: "6379"
+      IMMICH_SERVER_URL: https://immich-dev.donovanlowkeen.com
+      LOG_LEVEL: info
