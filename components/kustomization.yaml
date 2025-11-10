@@ -6,3 +6,5 @@ resources:
   - immich/sync-dev.yaml
   - immich/sync-staging.yaml
   - karakeep/sync-dev.yaml
+  - argocd/sync-dev.yaml
+  # - argocd/sync-prod.yaml
