@@ -21,14 +21,10 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
-  postRenderers:
-    - kustomize:
-        images:
-          - name: ghcr.io/immich-app/immich-server
-            newTag: v1.135.3
-          - name: ghcr.io/immich-app/immich-machine-learning
-            newTag: v1.135.3
   values:
+    image:
+      tag: "v1.135.3"
+    
     env:
       DB_HOSTNAME: immich-postgresql
       DB_PORT: "5432"
