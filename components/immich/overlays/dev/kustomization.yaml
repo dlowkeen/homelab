@@ -6,11 +6,9 @@ namespace: immich-dev
 resources:
   - ../../base
   - namespace.yaml
+  - helmrelease.yaml
   - db-secret-dev.enc.yaml
   - pvc-postgresql.yaml
   - pvc-bigboi.yaml
   - ingress.yaml
   - redis.yaml
-
-patches:
-  - path: version-patch.yaml
