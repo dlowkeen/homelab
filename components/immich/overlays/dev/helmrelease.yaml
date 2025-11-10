@@ -21,14 +21,14 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
-  # Force image tags to v1.119.0 using postRenderers
+  # Force image tags to v1.135.3 using postRenderers
   postRenderers:
     - kustomize:
         images:
           - name: ghcr.io/immich-app/immich-server
-            newTag: v1.119.0
+            newTag: v1.135.3
           - name: ghcr.io/immich-app/immich-machine-learning
-            newTag: v1.119.0
+            newTag: v1.135.3
         patches:
           - target:
               kind: Deployment
@@ -91,7 +91,7 @@ spec:
   values:
     # Required: Set image tag
     image:
-      tag: "v1.119.0"
+      tag: "v1.135.3"
     
     # Global env vars - use simple key-value for literals
     env:
@@ -120,7 +120,7 @@ spec:
     # Component-specific settings
     server:
       image:
-        tag: "v1.119.0"
+        tag: "v1.135.3"
       resources:
         requests:
           memory: "1Gi"
@@ -131,7 +131,7 @@ spec:
     
     microservices:
       image:
-        tag: "v1.119.0"
+        tag: "v1.135.3"
       resources:
         requests:
           memory: "1Gi"
@@ -142,7 +142,7 @@ spec:
     
     machine-learning:
       image:
-        tag: "v1.119.0"
+        tag: "v1.135.3"
       # Disable ML initially to save resources - you can enable later
       enabled: false
       resources:
