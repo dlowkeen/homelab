@@ -38,6 +38,9 @@ spec:
                 path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
                 value: /usr/src/app/upload
               - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/0/name
+                value: library
+              - op: replace
                 path: /spec/template/spec/volumes/0/name
                 value: library
               - op: add
