@@ -21,10 +21,79 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
+  # Force image tags using postRenderers
+  postRenderers:
+    - kustomize:
+        images:
+          - name: ghcr.io/immich-app/immich-server
+            newTag: v1.135.3
+          - name: ghcr.io/immich-app/immich-machine-learning
+            newTag: v1.135.3
+        patches:
+          - target:
+              kind: Deployment
+              name: immich-server
+            patch: |-
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_HOSTNAME
+                  value: immich-postgresql
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PORT
+                  value: "5432"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_USERNAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_PASSWORD
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_DATABASE_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_DATABASE_NAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_HOSTNAME
+                  value: immich-redis-master
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_PORT
+                  value: "6379"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: IMMICH_SERVER_URL
+                  value: https://immich-dev.donovanlowkeen.com
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: LOG_LEVEL
+                  value: info
   values:
+    # Required: Set image tag
     image:
       tag: "v1.135.3"
     
+    # Global env vars - use simple key-value for literals
     env:
       DB_HOSTNAME: immich-postgresql
       DB_PORT: "5432"
@@ -48,20 +117,40 @@ spec:
       IMMICH_SERVER_URL: https://immich-dev.donovanlowkeen.com
       LOG_LEVEL: info
     
-    # Configure persistence for uploads
-    immich:
-      persistence:
-        library:
-          existingClaim: immich-library-bigboi
-    
-    # Resource limits
+    # Component-specific settings
     server:
+      image:
+        tag: "v1.135.3"
       resources:
         requests:
           memory: "1Gi"
           cpu: "500m"
         limits:
           memory: "4Gi"
+          cpu: "2000m"
+    
+    microservices:
+      image:
+        tag: "v1.135.3"
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "6Gi"
+          cpu: "2000m"
+    
+    machine-learning:
+      image:
+        tag: "v1.135.3"
+      # Disable ML initially to save resources - you can enable later
+      enabled: false
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "8Gi"
           cpu: "2000m"
     
     web:
@@ -73,22 +162,8 @@ spec:
           memory: "512Mi"
           cpu: "500m"
     
-    microservices:
-      resources:
-        requests:
-          memory: "1Gi"
-          cpu: "500m"
-        limits:
-          memory: "6Gi"
-          cpu: "2000m"
-    
-    machine-learning:
-      enabled: false
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "500m"
-        limits:
-          memory: "8Gi"
-          cpu: "2000m"
-
+    # Configure persistence for uploads - use existing claim
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library-bigboi
