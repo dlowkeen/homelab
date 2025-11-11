@@ -7,4 +7,4 @@ resources:
   - immich/sync-staging.yaml
   - karakeep/sync-dev.yaml
   - argocd/sync-dev.yaml
-  # - argocd/sync-prod.yaml
+  - argocd/sync-prod.yaml
