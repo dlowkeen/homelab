@@ -6,7 +6,7 @@ metadata:
 spec:
   values:
     karakeep:
-      image: ghcr.io/karakeep-app/karakeep:v0.25.0
+      image: ghcr.io/karakeep-app/karakeep:0.25.0
       replicas: 1  # Scaled down to save resources
       dataPVCSize: 2Gi
     meilisearch:
