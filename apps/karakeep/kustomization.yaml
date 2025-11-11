@@ -1,6 +1,0 @@
-resources:
-  - helmrelease.yaml
-  - namespace.yaml
-  - karakeep-env.enc.yaml
-  - httproute.yaml
-  - ingress.yaml

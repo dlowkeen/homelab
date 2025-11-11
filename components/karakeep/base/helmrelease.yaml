@@ -14,7 +14,7 @@ spec:
         namespace: flux-system
   values:
     karakeep:
-      image: ghcr.io/karakeep-app/karakeep:0.25.0  # Default pinned version
+      image: ghcr.io/karakeep-app/karakeep:0.28.0  # Default pinned version
       dataPVCSize: 10Gi
     meilisearch:
       image: getmeili/meilisearch:v1.13.3
