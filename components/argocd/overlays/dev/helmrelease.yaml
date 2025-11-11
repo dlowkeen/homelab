@@ -84,14 +84,15 @@ spec:
     
     # Notifications controller
     notifications:
-      replicas: 0  # Scaled down to save resources
-      resources:
-        requests:
-          cpu: 25m
-          memory: 32Mi
-        limits:
-          cpu: 100m
-          memory: 128Mi
+      # resources:
+      #   requests:
+      #     cpu: 25m
+      #     memory: 32Mi
+      #   limits:
+      #     cpu: 100m
+      #     memory: 128Mi
+      enabled: false  # Disabled for dev to save resources
+
     
     # Dex (SSO)
     dex:
@@ -99,12 +100,12 @@ spec:
     
     # Redis resources
     redis:
-      replicas: 0  # Scaled down to save resources
-      resources:
-        requests:
-          cpu: 25m
-          memory: 32Mi
-        limits:
-          cpu: 100m
-          memory: 128Mi
+      # resources:
+      #   requests:
+      #     cpu: 25m
+      #     memory: 32Mi
+      #   limits:
+      #     cpu: 100m
+      #     memory: 128Mi
+      enabled: false  # Disabled for dev to save resources
 
