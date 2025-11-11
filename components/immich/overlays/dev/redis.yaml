@@ -4,7 +4,7 @@ metadata:
   name: immich-redis
   namespace: immich-dev
 spec:
-  replicas: 1
+  replicas: 0  # Scaled down to save resources
   selector:
     matchLabels:
       app: redis
@@ -20,11 +20,11 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: 50m
+            memory: 128Mi
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 200m
+            memory: 256Mi
 ---
 apiVersion: v1
 kind: Service

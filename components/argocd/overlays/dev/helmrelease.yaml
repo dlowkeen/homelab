@@ -27,7 +27,7 @@ spec:
     
     # Server configuration
     server:
-      replicas: 1
+      replicas: 0  # Scaled down to save resources
       ingress:
         enabled: true
         ingressClassName: nginx
@@ -51,7 +51,7 @@ spec:
     
     # Controller resources
     controller:
-      replicas: 1
+      replicas: 0  # Scaled down to save resources
       resources:
         requests:
           cpu: 100m
@@ -62,7 +62,7 @@ spec:
     
     # Repo server resources
     repoServer:
-      replicas: 1
+      replicas: 0  # Scaled down to save resources
       resources:
         requests:
           cpu: 50m
@@ -73,7 +73,7 @@ spec:
     
     # Application set controller
     applicationSet:
-      replicas: 1
+      replicas: 0  # Scaled down to save resources
       resources:
         requests:
           cpu: 25m
@@ -84,7 +84,7 @@ spec:
     
     # Notifications controller
     notifications:
-      replicas: 1
+      replicas: 0  # Scaled down to save resources
       resources:
         requests:
           cpu: 25m
@@ -99,6 +99,7 @@ spec:
     
     # Redis resources
     redis:
+      replicas: 0  # Scaled down to save resources
       resources:
         requests:
           cpu: 25m

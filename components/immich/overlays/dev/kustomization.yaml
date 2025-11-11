@@ -12,3 +12,6 @@ resources:
   - pvc-bigboi.yaml
   - ingress.yaml
   - redis.yaml
+
+patchesStrategicMerge:
+  - postgresql-patch.yaml

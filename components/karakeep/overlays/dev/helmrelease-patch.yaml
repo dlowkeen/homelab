@@ -6,6 +6,7 @@ metadata:
 spec:
   values:
     karakeep:
+      replicas: 0  # Scaled down to save resources
       dataPVCSize: 2Gi
     meilisearch:
       dataPVCSize: 2Gi
