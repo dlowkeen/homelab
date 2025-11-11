@@ -28,18 +28,7 @@ spec:
     # Server configuration
     server:
       ingress:
-        enabled: true
-        ingressClassName: nginx
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-prod
-          nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-          nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-        hosts:
-          - argocd-dev.donovanlowkeen.com
-        tls:
-          - secretName: argocd-dev-tls
-            hosts:
-              - argocd-dev.donovanlowkeen.com
+        enabled: false
       resources:
         requests:
           cpu: 100m
