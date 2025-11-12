@@ -45,9 +45,9 @@ spec:
             name: immich-database-secret
             key: DB_DATABASE_NAME
       # Connection details - override chart defaults
-      DB_HOSTNAME: immich-postgresql
+      DB_HOSTNAME: database
       DB_PORT: "5432"
-      REDIS_HOSTNAME: immich-redis-master
+      REDIS_HOSTNAME: immich-valkey
       REDIS_PORT: "6379"
       LOG_LEVEL: info
       # HTTPS configuration
