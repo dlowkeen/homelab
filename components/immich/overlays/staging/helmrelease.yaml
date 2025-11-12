@@ -62,8 +62,8 @@ spec:
     # Resource limits for Immich server components
     server:
       env:
-        DB_HOSTNAME: immich-postgresql
-        REDIS_HOSTNAME: immich-redis-master
+        DB_HOSTNAME: database
+        REDIS_HOSTNAME: immich-valkey
       resources:
         requests:
           memory: "1Gi"
@@ -83,8 +83,8 @@ spec:
     
     microservices:
       env:
-        DB_HOSTNAME: immich-postgresql
-        REDIS_HOSTNAME: immich-redis-master
+        DB_HOSTNAME: database
+        REDIS_HOSTNAME: immich-valkey
       resources:
         requests:
           memory: "1Gi"

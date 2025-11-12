@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: immich-redis
+  name: immich-valkey
   namespace: immich-staging
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: redis
+      app: immich-valkey
   template:
     metadata:
       labels:
-        app: redis
+        app: immich-valkey
     spec:
       containers:
       - name: redis
@@ -29,11 +29,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: immich-redis-master
+  name: immich-valkey
   namespace: immich-staging
 spec:
   selector:
-    app: redis
+    app: immich-valkey
   ports:
   - port: 6379
     targetPort: 6379
@@ -42,12 +42,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: immich-redis-headless
+  name: immich-valkey-headless
   namespace: immich-staging
 spec:
   clusterIP: None
   selector:
-    app: redis
+    app: immich-valkey
   ports:
   - port: 6379
     targetPort: 6379
