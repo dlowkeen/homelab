@@ -63,7 +63,24 @@ spec:
     server:
       env:
         DB_HOSTNAME: database
+        DB_PORT: "5432"
+        DB_USERNAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_USERNAME
+        DB_PASSWORD:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_PASSWORD
+        DB_DATABASE_NAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_DATABASE_NAME
         REDIS_HOSTNAME: immich-valkey
+        REDIS_PORT: "6379"
       resources:
         requests:
           memory: "1Gi"
@@ -84,7 +101,24 @@ spec:
     microservices:
       env:
         DB_HOSTNAME: database
+        DB_PORT: "5432"
+        DB_USERNAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_USERNAME
+        DB_PASSWORD:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_PASSWORD
+        DB_DATABASE_NAME:
+          valueFrom:
+            secretKeyRef:
+              name: immich-database-secret
+              key: DB_DATABASE_NAME
         REDIS_HOSTNAME: immich-valkey
+        REDIS_PORT: "6379"
       resources:
         requests:
           memory: "1Gi"
