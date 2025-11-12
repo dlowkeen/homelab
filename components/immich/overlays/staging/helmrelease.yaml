@@ -44,7 +44,7 @@ spec:
           secretKeyRef:
             name: immich-database-secret
             key: DB_DATABASE_NAME
-      # Connection details
+      # Connection details - override chart defaults
       DB_HOSTNAME: immich-postgresql
       DB_PORT: "5432"
       REDIS_HOSTNAME: immich-redis-master
@@ -61,6 +61,9 @@ spec:
     
     # Resource limits for Immich server components
     server:
+      env:
+        DB_HOSTNAME: immich-postgresql
+        REDIS_HOSTNAME: immich-redis-master
       resources:
         requests:
           memory: "1Gi"
@@ -79,6 +82,9 @@ spec:
           cpu: "500m"
     
     microservices:
+      env:
+        DB_HOSTNAME: immich-postgresql
+        REDIS_HOSTNAME: immich-redis-master
       resources:
         requests:
           memory: "1Gi"
