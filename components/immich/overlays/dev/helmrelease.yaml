@@ -21,7 +21,7 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
-  # Force image tags to v1.135.3 using postRenderers
+  # Force image tags and scale down server using postRenderers
   postRenderers:
     - kustomize:
         images:
@@ -34,6 +34,9 @@ spec:
               kind: Deployment
               name: immich-server
             patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
               - op: replace
                 path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
                 value: /usr/src/app/upload
