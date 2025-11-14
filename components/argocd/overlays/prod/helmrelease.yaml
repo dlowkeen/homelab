@@ -25,6 +25,41 @@ spec:
     global:
       domain: argocd.donovanlowkeen.com
     
+    # ArgoCD configuration
+    configs:
+      cm:
+        # Add local users
+        accounts.donovan: apiKey, login
+        accounts.michael: apiKey, login
+      
+      # RBAC configuration
+      rbac:
+        policy.default: role:readonly
+        policy.csv: |
+          # Admin role - full access
+          p, role:admin, applications, *, */*, allow
+          p, role:admin, clusters, *, *, allow
+          p, role:admin, repositories, *, *, allow
+          p, role:admin, projects, *, *, allow
+          p, role:admin, accounts, *, *, allow
+          
+          # Developer role - can manage applications and repos, but not infrastructure
+          p, role:developer, applications, *, */*, allow
+          p, role:developer, applications, create, */*, allow
+          p, role:developer, applications, update, */*, allow
+          p, role:developer, applications, delete, */*, allow
+          p, role:developer, applications, sync, */*, allow
+          p, role:developer, repositories, get, *, allow
+          p, role:developer, repositories, create, *, allow
+          p, role:developer, logs, get, */*, allow
+          p, role:developer, exec, create, */*, allow
+          
+          # Grant admin role to donovan
+          g, donovan, role:admin
+          
+          # Grant developer role to michael
+          g, michael, role:developer
+    
     # Server configuration
     server:
       ingress:
