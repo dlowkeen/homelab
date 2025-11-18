@@ -7,7 +7,7 @@ spec:
   values:
     karakeep:
       image: ghcr.io/karakeep-app/karakeep:0.28.0
-      replicas: 1  # Scaled down to save resources
+      replicas: 0  # Scaled down to save resources
       dataPVCSize: 2Gi
     meilisearch:
       dataPVCSize: 2Gi
