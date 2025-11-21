@@ -4,6 +4,16 @@ metadata:
   name: karakeep
   namespace: karakeep-dev
 spec:
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: karakeep
+            patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
   values:
     karakeep:
       image: ghcr.io/karakeep-app/karakeep:0.28.0
