@@ -93,45 +93,8 @@ spec:
           cpu: 1000m
           memory: 1Gi
     
-    # Repo server resources and SOPS configuration
+    # Repo server resources
     repoServer:
-      # Install SOPS via init container
-      initContainers:
-        - name: install-ksops
-          image: viaductoss/ksops:v4.3.2
-          command:
-            - sh
-            - -c
-            - |
-              # Find and copy SOPS binary
-              find / -name "sops" -type f 2>/dev/null | head -1 | xargs -I {} cp {} /custom-tools/sops || \
-              (wget -O /custom-tools/sops https://github.com/getsops/sops/releases/download/v3.9.3/sops-v3.9.3.linux.amd64 && chmod +x /custom-tools/sops)
-              
-              echo "SOPS installed successfully"
-              ls -la /custom-tools/
-          volumeMounts:
-            - name: custom-tools
-              mountPath: /custom-tools
-      
-      # Mount sops-age secret and custom tools
-      volumes:
-        - name: sops-age
-          secret:
-            secretName: sops-age
-        - name: custom-tools
-          emptyDir: {}
-      
-      volumeMounts:
-        - name: sops-age
-          mountPath: /app/.config/sops/age
-          readOnly: true
-        - name: custom-tools
-          mountPath: /usr/local/bin/sops
-          subPath: sops
-      
-      env:
-        - name: SOPS_AGE_KEY_FILE
-          value: /app/.config/sops/age/keys.txt
       resources:
         requests:
           cpu: 100m
