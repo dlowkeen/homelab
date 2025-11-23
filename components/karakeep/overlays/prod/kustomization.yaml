@@ -7,7 +7,7 @@ resources:
   - namespace.yaml
   - karakeep-env.enc.yaml
   - ingress.yaml
-  - httproute.yaml
+  # - httproute.yaml  # Removed: using Ingress instead
 
 # Override namespace for all resources
 namespace: karakeep
