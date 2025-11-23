@@ -11,3 +11,6 @@ resources:
   # Production environments
   - argocd/sync-prod.yaml
   - karakeep/sync-prod.yaml
+
+  # App Secrets
+  - threadwise/sync-prod.yaml
