@@ -95,18 +95,51 @@ spec:
     
     # Repo server resources and SOPS configuration
     repoServer:
-      # Mount sops-age secret for decryption
+      # Install SOPS via init container
+      initContainers:
+        - name: install-ksops
+          image: viaductoss/ksops:v4.3.2
+          command:
+            - sh
+            - -c
+            - |
+              # Copy SOPS and KSOPS binaries
+              cp /usr/local/bin/sops /custom-tools/
+              cp /usr/local/bin/kustomize /custom-tools/
+              # Copy KSOPS plugin
+              mkdir -p /custom-tools/kustomize/plugin/viaduct.ai/v1/ksops
+              cp /kustomize/plugin/viaduct.ai/v1/ksops/ksops /custom-tools/kustomize/plugin/viaduct.ai/v1/ksops/
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /custom-tools
+      
+      # Mount sops-age secret and custom tools
       volumes:
         - name: sops-age
           secret:
             secretName: sops-age
+        - name: custom-tools
+          emptyDir: {}
+      
       volumeMounts:
         - name: sops-age
           mountPath: /app/.config/sops/age
           readOnly: true
+        - name: custom-tools
+          mountPath: /usr/local/bin/sops
+          subPath: sops
+        - name: custom-tools
+          mountPath: /usr/local/bin/kustomize
+          subPath: kustomize
+        - name: custom-tools
+          mountPath: /.config/kustomize/plugin
+          subPath: kustomize/plugin
+      
       env:
         - name: SOPS_AGE_KEY_FILE
           value: /app/.config/sops/age/keys.txt
+        - name: XDG_CONFIG_HOME
+          value: /.config
       resources:
         requests:
           cpu: 100m
