@@ -93,8 +93,20 @@ spec:
           cpu: 1000m
           memory: 1Gi
     
-    # Repo server resources
+    # Repo server resources and SOPS configuration
     repoServer:
+      # Mount sops-age secret for decryption
+      volumes:
+        - name: sops-age
+          secret:
+            secretName: sops-age
+      volumeMounts:
+        - name: sops-age
+          mountPath: /app/.config/sops/age
+          readOnly: true
+      env:
+        - name: SOPS_AGE_KEY_FILE
+          value: /app/.config/sops/age/keys.txt
       resources:
         requests:
           cpu: 100m
