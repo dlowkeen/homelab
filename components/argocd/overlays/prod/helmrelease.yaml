@@ -103,12 +103,12 @@ spec:
             - sh
             - -c
             - |
-              # Copy SOPS and KSOPS binaries
-              cp /usr/local/bin/sops /custom-tools/
-              cp /usr/local/bin/kustomize /custom-tools/
-              # Copy KSOPS plugin
-              mkdir -p /custom-tools/kustomize/plugin/viaduct.ai/v1/ksops
-              cp /kustomize/plugin/viaduct.ai/v1/ksops/ksops /custom-tools/kustomize/plugin/viaduct.ai/v1/ksops/
+              # Find and copy SOPS binary
+              find / -name "sops" -type f 2>/dev/null | head -1 | xargs -I {} cp {} /custom-tools/sops || \
+              (wget -O /custom-tools/sops https://github.com/getsops/sops/releases/download/v3.9.3/sops-v3.9.3.linux.amd64 && chmod +x /custom-tools/sops)
+              
+              echo "SOPS installed successfully"
+              ls -la /custom-tools/
           volumeMounts:
             - name: custom-tools
               mountPath: /custom-tools
@@ -128,18 +128,10 @@ spec:
         - name: custom-tools
           mountPath: /usr/local/bin/sops
           subPath: sops
-        - name: custom-tools
-          mountPath: /usr/local/bin/kustomize
-          subPath: kustomize
-        - name: custom-tools
-          mountPath: /.config/kustomize/plugin
-          subPath: kustomize/plugin
       
       env:
         - name: SOPS_AGE_KEY_FILE
           value: /app/.config/sops/age/keys.txt
-        - name: XDG_CONFIG_HOME
-          value: /.config
       resources:
         requests:
           cpu: 100m
