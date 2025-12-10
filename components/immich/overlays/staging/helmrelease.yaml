@@ -21,9 +21,13 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
-  # Use postRenderers to inject env vars that the chart doesn't support natively
+  # Use postRenderers to inject env vars and image that the chart doesn't support natively
   postRenderers:
     - kustomize:
+        # Override the image to ensure correct version is used
+        images:
+          - name: ghcr.io/immich-app/immich-server
+            newTag: v2.3.1
         patches:
           # Patch immich-server deployment to add DB env vars
           - target:
@@ -65,8 +69,9 @@ spec:
                       name: immich-database-secret
                       key: DB_DATABASE_NAME
   values:
-    image:
-      tag: "v2.3.1"
+  # I dont think this is needed anymore
+    # image:
+    #   tag: "v2.3.1"
     
     # Configure persistence for uploads - use existing claim
     immich:
