@@ -14,3 +14,6 @@ resources:
   - redis.yaml
   - postgresql-service-patch.yaml
 
+patches:
+  - path: postgresql-resources-patch.yaml
+
