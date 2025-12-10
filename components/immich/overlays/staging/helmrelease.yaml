@@ -21,34 +21,53 @@ spec:
   upgrade:
     timeout: 10m
     crds: CreateReplace
+  # Use postRenderers to inject env vars that the chart doesn't support natively
+  postRenderers:
+    - kustomize:
+        patches:
+          # Patch immich-server deployment to add DB env vars
+          - target:
+              kind: Deployment
+              name: immich-server
+            patch: |-
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_HOSTNAME
+                  value: "database"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PORT
+                  value: "5432"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_USERNAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_PASSWORD
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_DATABASE_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_DATABASE_NAME
   values:
     # v2.0.0 image tag for testing
     image:
       tag: "v2.0.0"
-    
-    # All environment variables with explicit secret references
-    env:
-      # Database credentials from secret - using common chart format
-      DB_USERNAME:
-        secretKeyRef:
-          name: immich-database-secret
-          key: DB_USERNAME
-      DB_PASSWORD:
-        secretKeyRef:
-          name: immich-database-secret
-          key: DB_PASSWORD
-      DB_DATABASE_NAME:
-        secretKeyRef:
-          name: immich-database-secret
-          key: DB_DATABASE_NAME
-      # Connection details - override chart defaults
-      DB_HOSTNAME: database
-      DB_PORT: "5432"
-      REDIS_HOSTNAME: immich-valkey
-      REDIS_PORT: "6379"
-      LOG_LEVEL: info
-      # HTTPS configuration
-      IMMICH_SERVER_URL: https://immich-staging.donovanlowkeen.com
     
     # Configure persistence for uploads - use existing claim
     immich:
@@ -56,28 +75,13 @@ spec:
         library:
           existingClaim: immich-library-bigboi
     
+    # Redis/Valkey hostname
+    env:
+      REDIS_HOSTNAME: immich-valkey
+      REDIS_PORT: "6379"
+    
     # Resource limits for Immich server components
     server:
-      env:
-        DB_HOSTNAME: database
-        DB_PORT: "5432"
-        DB_USERNAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_USERNAME
-        DB_PASSWORD:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_PASSWORD
-        DB_DATABASE_NAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_DATABASE_NAME
-        REDIS_HOSTNAME: immich-valkey
-        REDIS_PORT: "6379"
       resources:
         requests:
           memory: "128Mi"
@@ -96,26 +100,6 @@ spec:
           cpu: "100m"
     
     microservices:
-      env:
-        DB_HOSTNAME: database
-        DB_PORT: "5432"
-        DB_USERNAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_USERNAME
-        DB_PASSWORD:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_PASSWORD
-        DB_DATABASE_NAME:
-          valueFrom:
-            secretKeyRef:
-              name: immich-database-secret
-              key: DB_DATABASE_NAME
-        REDIS_HOSTNAME: immich-valkey
-        REDIS_PORT: "6379"
       resources:
         requests:
           memory: "128Mi"
