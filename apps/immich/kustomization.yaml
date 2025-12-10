@@ -8,5 +8,5 @@ resources:
   - postgresql.yaml
   - pvc.yaml
   - pvc-bigboi.yaml
-  - helmrelease.yaml
+  # - helmrelease.yaml  # Commented out - migrated to components/immich/overlays/prod
   - ingress.yaml
