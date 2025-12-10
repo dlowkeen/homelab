@@ -75,6 +75,10 @@ spec:
               - op: replace
                 path: /spec/template/spec/containers/0/volumeMounts/0/name
                 value: library
+              # Also rename the volume to match
+              - op: replace
+                path: /spec/template/spec/volumes/0/name
+                value: library
   values:
   # I dont think this is needed anymore
     # image:
