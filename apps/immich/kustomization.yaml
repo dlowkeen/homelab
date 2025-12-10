@@ -5,8 +5,5 @@ resources:
   - sync.yaml
   - namespace.yaml
   - db-secret.enc.yaml
-  # - postgresql.yaml
   - pvc.yaml
   - pvc-bigboi.yaml
-  # - helmrelease.yaml  # Commented out - migrated to components/immich/overlays/prod
-  - ingress.yaml
