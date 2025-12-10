@@ -68,6 +68,13 @@ spec:
                     secretKeyRef:
                       name: immich-database-secret
                       key: DB_DATABASE_NAME
+              # Fix mount path to match prod (/usr/src/app/upload) so database paths work
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
+                value: /usr/src/app/upload
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/0/name
+                value: library
   values:
   # I dont think this is needed anymore
     # image:
