@@ -5,5 +5,5 @@ resources:
   - sync.yaml
   - namespace.yaml
   - db-secret.enc.yaml
-  - pvc.yaml
-  - pvc-bigboi.yaml
+  # - pvc.yaml  # Not used - prod uses immich-library-bigboi instead
+  # - pvc-bigboi.yaml  # Moved to components/immich/overlays/prod
