@@ -65,9 +65,8 @@ spec:
                       name: immich-database-secret
                       key: DB_DATABASE_NAME
   values:
-    # v2.0.0 image tag for testing
     image:
-      tag: "v2.0.0"
+      tag: "v2.3.1"
     
     # Configure persistence for uploads - use existing claim
     immich:
