@@ -1,0 +1,133 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: immich
+  namespace: immich
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: immich
+      version: "0.10.0"
+      sourceRef:
+        kind: HelmRepository
+        name: immich
+        namespace: flux-system
+      interval: 12h
+  install:
+    timeout: 10m
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    timeout: 10m
+    crds: CreateReplace
+  # Use postRenderers to inject env vars and image that the chart doesn't support natively
+  postRenderers:
+    - kustomize:
+        # Override the image to ensure correct version is used
+        images:
+          - name: ghcr.io/immich-app/immich-server
+            newTag: v2.3.1
+        patches:
+          # Patch immich-server deployment to add DB env vars
+          - target:
+              kind: Deployment
+              name: immich-server
+            patch: |-
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_HOSTNAME
+                  value: "database"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PORT
+                  value: "5432"
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_USERNAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_PASSWORD
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: DB_DATABASE_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-database-secret
+                      key: DB_DATABASE_NAME
+              # Fix mount path to match prod (/usr/src/app/upload) so database paths work
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
+                value: /usr/src/app/upload
+              - op: replace
+                path: /spec/template/spec/containers/0/volumeMounts/0/name
+                value: library
+              # Also rename the volume to match
+              - op: replace
+                path: /spec/template/spec/volumes/0/name
+                value: library
+  values:
+    # Configure persistence for uploads - use existing prod claim
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library-bigboi
+    
+    # Redis/Valkey hostname
+    env:
+      REDIS_HOSTNAME: immich-valkey
+      REDIS_PORT: "6379"
+      IMMICH_SERVER_URL: https://immich.donovanlowkeen.com
+    
+    # Resource limits for Immich server components
+    server:
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "512Mi"
+          cpu: "200m"
+    
+    web:
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "25m"
+        limits:
+          memory: "128Mi"
+          cpu: "100m"
+    
+    microservices:
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "512Mi"
+          cpu: "200m"
+    
+    machine-learning:
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "50m"
+        limits:
+          memory: "512Mi"
+          cpu: "200m"
+      # Disable ML initially to save resources - you can enable later
+      enabled: false
+

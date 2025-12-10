@@ -4,13 +4,13 @@ kind: Kustomization
 resources:
   # Development environments
   - immich/sync-dev.yaml
-  - immich/sync-staging.yaml
   - karakeep/sync-dev.yaml
   - argocd/sync-dev.yaml
   
   # Production environments
   - argocd/sync-prod.yaml
   - karakeep/sync-prod.yaml
+  # - immich/sync-prod.yaml
 
   # App Secrets
   - threadwise/sync-prod.yaml
