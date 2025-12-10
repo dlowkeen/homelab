@@ -6,6 +6,7 @@ namespace: immich
 resources:
   - ../../base
   - namespace.yaml
+  - helmrepository.yaml
   - helmrelease.yaml
   - db-secret.enc.yaml
   - pvc-postgresql.yaml

@@ -4,6 +4,5 @@ kind: Kustomization
 # Base contains only generic/shared resources
 # Environment-specific resources (namespace, secrets, ingress, PVCs, HelmRelease) are defined in overlays
 resources:
-  - helmrepository.yaml
   - postgresql.yaml
 
