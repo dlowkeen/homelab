@@ -102,19 +102,6 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
-      # Disable KSOPS plugin (we use Flux for SOPS decryption)
-      # Keep copyutil init container, only remove install-ksops
-      initContainers:
-        - name: copyutil
-          image: quay.io/argoproj/argocd:v2.12.6
-          command:
-            - /bin/cp
-            - -n
-            - /usr/local/bin/argocd
-            - /var/run/argocd/argocd-cmp-server
-          volumeMounts:
-            - name: var-files
-              mountPath: /var/run/argocd
     
     # Redis resources
     redis:
