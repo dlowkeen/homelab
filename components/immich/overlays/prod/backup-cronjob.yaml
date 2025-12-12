@@ -66,6 +66,13 @@ spec:
             - name: gcs-credentials
               mountPath: /etc/gcs
               readOnly: true
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "200m"
+              limits:
+                memory: "1Gi"
+                cpu: "1000m"
           volumes:
           # Library hostPath (bypasses RWO limitation by accessing hostPath directly)
           # Since the PV is a hostPath, we can mount it directly on the same node
