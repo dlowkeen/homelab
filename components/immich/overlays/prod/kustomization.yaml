@@ -14,6 +14,8 @@ resources:
   - ingress.yaml
   - redis.yaml
   - postgresql-service-patch.yaml
+  - gcs-secrets.enc.yaml
+  - backup-cronjob.yaml
 
 patches:
   - path: postgresql-resources-patch.yaml
