@@ -22,9 +22,13 @@ import subprocess
 import gzip
 import tempfile
 import sqlite3
+import time
+import threading
+from queue import Queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Callable
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
 
@@ -47,6 +51,7 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 IMMICH_VERSION = os.getenv('IMMICH_VERSION', 'unknown')
 DB_BACKUP_RETENTION = int(os.getenv('DB_BACKUP_RETENTION', '5'))  # Keep last 5 backups
 GCS_STORAGE_CLASS = os.getenv('GCS_STORAGE_CLASS', 'ARCHIVE')  # Coldest storage
+UPLOAD_WORKERS = int(os.getenv('UPLOAD_WORKERS', '4'))  # Number of parallel upload threads
 
 
 class BackupManifest:
@@ -126,8 +131,45 @@ class BackupManifest:
             logger.warning(f"Error loading manifest: {e}, starting fresh")
             return False
     
+    def save_to_gcs(self, include_backup: bool = False):
+        """
+        Save manifest to GCS (lightweight version for periodic saves).
+        
+        Args:
+            include_backup: If True, also create a timestamped backup copy
+        """
+        if self.conn:
+            self.conn.commit()
+        
+        db_path = self._get_db_path()
+        
+        # Save current manifest with retry
+        def upload_manifest():
+            blob = self.bucket.blob(self.manifest_path)
+            blob.upload_from_filename(db_path)
+            blob.storage_class = GCS_STORAGE_CLASS
+            blob.patch()
+            return True
+        
+        try:
+            retry_with_backoff(upload_manifest, max_retries=3, initial_delay=1.0, max_delay=30.0)
+            logger.info(f"Saved manifest to {self.manifest_path}")
+        except Exception as e:
+            logger.error(f"Failed to save manifest to GCS: {e}")
+            raise
+        
+        # Optionally save timestamped backup
+        if include_backup:
+            timestamp_str = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+            backup_path = f'manifest-{timestamp_str}.db'
+            backup_blob = self.bucket.blob(backup_path)
+            backup_blob.upload_from_filename(db_path)
+            backup_blob.storage_class = GCS_STORAGE_CLASS
+            backup_blob.patch()
+            logger.info(f"Saved manifest backup to {backup_path}")
+    
     def save(self):
-        """Save manifest to GCS with timestamp backup"""
+        """Save manifest to GCS with timestamp backup and metadata update"""
         if self.conn:
             self.conn.commit()
         
@@ -140,23 +182,8 @@ class BackupManifest:
         """, (timestamp, IMMICH_VERSION))
         conn.commit()
         
-        db_path = self._get_db_path()
-        
-        # Save current manifest
-        blob = self.bucket.blob(self.manifest_path)
-        blob.upload_from_filename(db_path)
-        blob.storage_class = GCS_STORAGE_CLASS
-        blob.patch()
-        logger.info(f"Saved manifest to {self.manifest_path}")
-        
-        # Save timestamped backup of manifest
-        timestamp_str = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-        backup_path = f'manifest-{timestamp_str}.db'
-        backup_blob = self.bucket.blob(backup_path)
-        backup_blob.upload_from_filename(db_path)
-        backup_blob.storage_class = GCS_STORAGE_CLASS
-        backup_blob.patch()
-        logger.info(f"Saved manifest backup to {backup_path}")
+        # Save to GCS with backup
+        self.save_to_gcs(include_backup=True)
     
     def get_file_info(self, file_path: str) -> Optional[Dict]:
         """Get file info from manifest (doesn't load everything, just queries)"""
@@ -219,9 +246,166 @@ def calculate_sha256(file_path: Path) -> str:
     return f"sha256:{sha256_hash.hexdigest()}"
 
 
+def retry_with_backoff(func: Callable, max_retries: int = 5, initial_delay: float = 1.0, max_delay: float = 60.0, backoff_factor: float = 2.0):
+    """
+    Retry a function with exponential backoff.
+    
+    Args:
+        func: Function to retry
+        max_retries: Maximum number of retry attempts
+        initial_delay: Initial delay in seconds
+        max_delay: Maximum delay in seconds
+        backoff_factor: Multiplier for delay between retries
+    
+    Returns:
+        Result of the function call
+    
+    Raises:
+        Last exception if all retries fail
+    """
+    delay = initial_delay
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {delay:.1f}s...")
+                time.sleep(delay)
+                delay = min(delay * backoff_factor, max_delay)
+            else:
+                logger.error(f"All {max_retries} attempts failed. Last error: {e}")
+    
+    raise last_exception
+
+
+def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bucket, manifest: BackupManifest, manifest_lock: threading.Lock) -> Tuple[str, Optional[str]]:
+    """
+    Process a single file for backup (worker function for parallel processing).
+    Returns: (status, error_message)
+    Status can be: 'uploaded', 'skipped', 'error'
+    """
+    relative_path = file_path.relative_to(library_path)
+    file_path_str = f"/{relative_path.as_posix()}"
+    
+    try:
+        # Get file stats
+        stat = file_path.stat()
+        file_size = stat.st_size
+        
+        # Calculate checksum
+        checksum = calculate_sha256(file_path)
+        
+        # Check if file is already backed up with same checksum (thread-safe)
+        with manifest_lock:
+            existing_info = manifest.get_file_info(file_path_str)
+            if existing_info and existing_info.get('checksum') == checksum:
+                return ('skipped', None)
+        
+        # Upload to GCS (derive path from file_path)
+        gcs_path = manifest._derive_gcs_path(file_path_str)
+        blob = bucket.blob(gcs_path)
+        
+        # Upload with retry logic
+        logger.info(f"Uploading {file_path_str} -> {gcs_path} ({file_size:,} bytes)")
+        try:
+            def upload_file():
+                blob.upload_from_filename(str(file_path))
+                return True
+            
+            retry_with_backoff(upload_file, max_retries=5, initial_delay=2.0, max_delay=120.0)
+            
+            # Set storage class with retry
+            def set_storage_class():
+                blob.storage_class = GCS_STORAGE_CLASS
+                blob.patch()
+                return True
+            
+            retry_with_backoff(set_storage_class, max_retries=3, initial_delay=1.0, max_delay=30.0)
+            
+            # Verify upload with retry
+            def verify_upload():
+                if not blob.exists():
+                    raise Exception("Upload verification failed: blob does not exist")
+                return True
+            
+            retry_with_backoff(verify_upload, max_retries=3, initial_delay=1.0, max_delay=30.0)
+            
+            # Update manifest (thread-safe)
+            with manifest_lock:
+                manifest.update_file_info(file_path_str, checksum, file_size, archived=False)
+            
+            return ('uploaded', None)
+            
+        except Exception as e:
+            error_msg = f"Upload failed after retries: {file_path_str} -> {gcs_path}: {e}"
+            logger.error(error_msg)
+            return ('error', error_msg)
+            
+    except Exception as e:
+        error_msg = f"Error processing {file_path_str}: {e}"
+        logger.error(error_msg)
+        return ('error', error_msg)
+
+
+def _process_completed_future(future, completed: int, new_files: int, skipped_files: int, errors: List[str], 
+                               manifest: BackupManifest, manifest_lock: threading.Lock, 
+                               total_files: int = None) -> Tuple[int, int, int]:
+    """
+    Process a completed future and update counters/logs/manifest.
+    Returns: (new_files, skipped_files, completed)
+    """
+    try:
+        status, error_msg = future.result()
+        
+        if status == 'uploaded':
+            new_files += 1
+        elif status == 'skipped':
+            skipped_files += 1
+        elif status == 'error':
+            if error_msg:
+                errors.append(error_msg)
+        
+        # Log progress every 10 files
+        if completed % 10 == 0:
+            if total_files is not None and total_files > 0:
+                percentage = (completed / total_files) * 100
+                logger.info(f"Progress: {completed}/{total_files} processed ({percentage:.1f}%), {new_files} uploaded, {skipped_files} skipped, {len(errors)} errors")
+            else:
+                # Producer still discovering files - show discovered count as estimate
+                logger.info(f"Progress: {completed} processed (at least {completed} total discovered so far), {new_files} uploaded, {skipped_files} skipped, {len(errors)} errors")
+        
+        # Commit to local DB every 100 new files (thread-safe)
+        if new_files > 0 and new_files % 100 == 0:
+            with manifest_lock:
+                manifest.commit()
+            logger.info(f"Manifest committed locally: {new_files} new files backed up so far")
+        
+        # Save manifest to GCS every 1000 new files (thread-safe)
+        if new_files > 0 and new_files % 1000 == 0:
+            try:
+                with manifest_lock:
+                    manifest.save_to_gcs(include_backup=False)
+                logger.info(f"Manifest saved to GCS: {new_files} new files backed up so far")
+            except Exception as e:
+                logger.error(f"Failed to save manifest to GCS (will retry later): {e}")
+                # Don't fail the whole backup if manifest save fails
+        
+        return new_files, skipped_files, completed + 1
+        
+    except Exception as e:
+        error_msg = f"Unexpected error processing file: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        return new_files, skipped_files, completed + 1
+
+
 def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tuple[int, int, int, List[str]]:
     """
-    Backup library files incrementally.
+    Backup library files incrementally using parallel uploads with queue-based producer-consumer pattern.
+    Uses bounded queue to limit memory usage and provide natural backpressure.
     Returns: (total_files, new_files, skipped_files, error_list)
     """
     library_path = Path(LIBRARY_PATH)
@@ -229,69 +413,95 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
         logger.error(f"Library path does not exist: {LIBRARY_PATH}")
         sys.exit(1)
     
+    # Thread-safe counters and collections
     total_files = 0
     new_files = 0
     skipped_files = 0
-    errors = []  # Collect error messages instead of just counting
+    errors = []
+    manifest_lock = threading.Lock()
     
-    logger.info(f"Scanning library directory: {LIBRARY_PATH}")
+    # Bounded queue: limits memory usage and provides backpressure
+    # Queue size = workers * 10 gives buffer for in-flight tasks
+    queue_size = UPLOAD_WORKERS * 10
+    file_queue = Queue(maxsize=queue_size)
     
-    # Walk through all files in library directory
-    for root, dirs, files in os.walk(library_path):
-        for file_name in files:
-            file_path = Path(root) / file_name
-            relative_path = file_path.relative_to(library_path)
-            file_path_str = f"/{relative_path.as_posix()}"
+    logger.info(f"Backing up library directory: {LIBRARY_PATH} (using {UPLOAD_WORKERS} parallel workers, queue size: {queue_size})")
+    
+    # Track when producer finishes (for accurate progress reporting)
+    producer_finished = threading.Event()
+    
+    def file_producer():
+        """Producer thread: walks directory and adds files to queue"""
+        nonlocal total_files
+        try:
+            for root, dirs, files in os.walk(library_path):
+                for file_name in files:
+                    file_path = Path(root) / file_name
+                    total_files += 1
+                    file_queue.put(file_path)  # Blocks if queue is full (backpressure)
+            # Signal completion with None sentinel
+            file_queue.put(None)
+            producer_finished.set()  # Mark producer as finished
+        except Exception as e:
+            logger.error(f"Error in file producer: {e}")
+            file_queue.put(None)  # Signal completion even on error
+            producer_finished.set()
+    
+    # Start producer thread
+    producer_thread = threading.Thread(target=file_producer, name="FileProducer")
+    producer_thread.start()
+    
+    # Process files in parallel using queue
+    with ThreadPoolExecutor(max_workers=UPLOAD_WORKERS) as executor:
+        futures = []
+        completed = 0
+        
+        while True:
+            # Get file from queue (blocks until available)
+            file_path = file_queue.get()
             
-            total_files += 1
+            # Check for sentinel (end of files)
+            if file_path is None:
+                break
             
-            try:
-                # Get file stats
-                stat = file_path.stat()
-                file_size = stat.st_size
-                
-                # Calculate checksum
-                logger.debug(f"Calculating checksum for {file_path_str}")
-                checksum = calculate_sha256(file_path)
-                
-                # Check if file is already backed up with same checksum
-                existing_info = manifest.get_file_info(file_path_str)
-                if existing_info and existing_info.get('checksum') == checksum:
-                    logger.debug(f"Skipping {file_path_str} (already backed up)")
-                    skipped_files += 1
-                    continue
-                
-                # Upload to GCS (derive path from file_path)
-                gcs_path = manifest._derive_gcs_path(file_path_str)
-                blob = bucket.blob(gcs_path)
-                
-                logger.info(f"Uploading {file_path_str} -> {gcs_path} ({file_size} bytes)")
-                blob.upload_from_filename(str(file_path))
-                
-                # Set storage class
-                blob.storage_class = GCS_STORAGE_CLASS
-                blob.patch()
-                
-                # Verify upload
-                if not blob.exists():
-                    error_msg = f"Upload verification failed: {file_path_str} -> {gcs_path}"
-                    errors.append(error_msg)
-                    continue
-                
-                # Update manifest (batch commits for performance)
-                manifest.update_file_info(file_path_str, checksum, file_size, archived=False)
-                new_files += 1
-                
-                # Commit every 100 files to balance performance and safety
-                if new_files % 100 == 0:
-                    manifest.commit()
-                
-            except Exception as e:
-                error_msg = f"Error processing {file_path_str}: {e}"
-                errors.append(error_msg)
+            # Submit file for processing
+            future = executor.submit(_process_single_file, file_path, library_path, bucket, manifest, manifest_lock)
+            futures.append(future)
+            
+            # Process completed futures periodically to free memory
+            # Check completed futures every iteration to keep memory bounded
+            for completed_future in list(futures):
+                if completed_future.done():
+                    futures.remove(completed_future)
+                    # Only use total_files for progress if producer has finished, otherwise show "discovered so far"
+                    total_for_progress = total_files if producer_finished.is_set() else None
+                    new_files, skipped_files, completed = _process_completed_future(
+                        completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress
+                    )
+        
+        # Wait for producer to finish to get final total count
+        producer_thread.join()
+        logger.info(f"Directory scan complete. Found {total_files} total files. Waiting for remaining uploads to complete...")
+        
+        # Wait for all remaining futures to complete
+        for future in as_completed(futures):
+            new_files, skipped_files, completed = _process_completed_future(
+                future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_files
+            )
     
-    # Final commit
-    manifest.commit()
+    # Final commit to local DB
+    with manifest_lock:
+        manifest.commit()
+    
+    # Save manifest to GCS to preserve progress (even if there were errors)
+    if new_files > 0:
+        try:
+            manifest.save_to_gcs(include_backup=False)
+            logger.info(f"Manifest saved to GCS after library backup: {new_files} new files backed up")
+        except Exception as e:
+            logger.error(f"Failed to save manifest to GCS after library backup: {e}")
+            # Don't fail - we'll try again at the end
+    
     logger.info(f"Library backup complete: {total_files} total, {new_files} new, {skipped_files} skipped, {len(errors)} errors")
     return total_files, new_files, skipped_files, errors
 
@@ -435,12 +645,22 @@ def main():
     logger.info("=" * 60)
     db_success = backup_database(bucket)
     
+    # Always save manifest, even if database backup failed
+    # This preserves library backup progress
+    try:
+        manifest.save()
+    except Exception as e:
+        logger.error(f"Failed to save manifest: {e}")
+        # Try lightweight save as fallback
+        try:
+            manifest.save_to_gcs(include_backup=False)
+            logger.info("Saved manifest using lightweight method")
+        except Exception as e2:
+            logger.error(f"Failed to save manifest even with lightweight method: {e2}")
+    
     if not db_success:
         logger.error("Database backup failed")
         sys.exit(1)
-    
-    # Save manifest
-    manifest.save()
     
     # Summary
     logger.info("=" * 60)

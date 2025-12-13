@@ -66,7 +66,7 @@ sops -e -i components/immich/overlays/prod/backup-secrets.enc.yaml
 
 ```bash
 # Build the image
-docker build -t your-registry/immich-backup:latest apps/immich-backup/
+docker build --platform linux/amd64 -t your-registry/immich-backup:latest apps/immich-backup/
 
 # Push to registry
 docker push your-registry/immich-backup:latest
@@ -162,6 +162,62 @@ The manifest is stored as a SQLite database (`manifest.db`) in GCS for efficient
 - File: `/upload/2024/01/photo.jpg`
 - GCS Path: `library/upload/2024/01/photo.jpg` (derived)
 - Stored: `file_path`, `checksum`, `size`, `archived`
+
+## Design Decisions
+
+### Queue-Based Producer-Consumer Pattern
+
+The backup system uses a **queue-based producer-consumer pattern** for parallel file uploads instead of a simpler streaming approach. Here's why:
+
+#### Why Queues Over Streaming?
+
+**Memory Efficiency:**
+- **Queue approach**: Uses a bounded queue (default: `UPLOAD_WORKERS * 10` = 40 file paths) with constant memory usage
+- **Streaming approach**: Would accumulate all `Future` objects in memory, growing linearly with file count
+- For 4TB with millions of files, streaming could use 100MB+ just for Future objects
+
+**Natural Backpressure:**
+- When workers are slow (network issues, large files), the queue fills up
+- Producer thread automatically blocks at `queue.put()`, preventing it from getting too far ahead
+- System self-regulates without manual intervention
+- Streaming would require manual checks and cleanup logic
+
+**Explicit Memory Bounds:**
+- Queue size is clearly defined and configurable
+- Easy to reason about memory usage: `queue_size + (workers × in-flight tasks)`
+- Streaming approach has unclear maximum memory (depends on cleanup timing)
+
+**Better Separation of Concerns:**
+- Producer thread: Only walks directory, puts paths in queue
+- Consumer threads: Only pull from queue and process files
+- Clean separation makes the code easier to understand and maintain
+
+#### Trade-offs
+
+- **Slightly more complex**: Requires a separate producer thread and queue management
+- **Worth it**: For production systems handling TBs of data, the memory safety and backpressure are essential
+
+### Other Key Decisions
+
+**SQLite Manifest (not JSON):**
+- Scales to millions of files without OOM
+- Efficient queries with indexes
+- Only ~252 bytes per file (optimized schema)
+
+**Periodic Manifest Saves:**
+- Saves to GCS every 1000 files (not just at end)
+- Prevents progress loss if job fails mid-backup
+- At most 1000 files need re-checking on restart
+
+**Retry Logic with Exponential Backoff:**
+- Handles transient network issues automatically
+- Up to 5 retries for uploads (2s → 4s → 8s → 16s → 32s delays)
+- Prevents single network blip from failing entire backup
+
+**Parallel Uploads:**
+- Configurable workers (default: 4) for concurrent uploads
+- Significantly faster than sequential (2-4x speedup typical)
+- Thread-safe manifest updates using locks
 
 ## Troubleshooting
 
