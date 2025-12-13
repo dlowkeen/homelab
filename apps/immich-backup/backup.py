@@ -319,7 +319,9 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
                 # upload_from_filename automatically uses resumable uploads for large files
                 # This handles timeouts better and can resume if interrupted
                 # The library will automatically retry on timeout errors
-                blob.upload_from_filename(str(file_path))
+                # Use a long timeout (1800s = 30 mins) to handle slow uploads on constrained bandwidth
+                # For large files on slow connections, this prevents premature timeouts
+                blob.upload_from_filename(str(file_path), timeout=1800)
                 return True
             
             retry_with_backoff(upload_file, max_retries=5, initial_delay=2.0, max_delay=120.0)

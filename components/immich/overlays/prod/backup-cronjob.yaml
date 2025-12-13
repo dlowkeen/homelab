@@ -31,7 +31,7 @@ spec:
             kubernetes.io/hostname: donovan-optiplex-9020m
           containers:
           - name: backup
-            image: devlowkeen/immich-backup:v0.0.5
+            image: devlowkeen/immich-backup:v0.0.6
             imagePullPolicy: Always
             command: ["python3", "/app/backup.py"]
             env:
