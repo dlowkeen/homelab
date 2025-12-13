@@ -15,6 +15,10 @@ spec:
       # Allow job to run for up to 7 days (for large initial backups)
       # Subsequent runs will be much faster due to incremental nature
       activeDeadlineSeconds: 604800  # 7 days = 604800 seconds
+      # Keep failed pods for 7 days for debugging (0 = keep forever, but 7 days matches activeDeadlineSeconds)
+      ttlSecondsAfterFinished: 604800  # 7 days = 604800 seconds
+      # Increase backoff limit to allow more retries before giving up
+      backoffLimit: 5
       template:
         metadata:
           labels:
