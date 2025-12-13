@@ -390,8 +390,9 @@ def _process_completed_future(future, completed: int, new_files: int, skipped_fi
                 manifest.commit()
             logger.info(f"Manifest committed locally: {new_files} new files backed up so far")
         
-        # Save manifest to GCS every 100 new files (thread-safe) - more frequent to prevent progress loss
-        if new_files > 0 and new_files % 100 == 0:
+        # Save manifest to GCS every 50 new files (thread-safe) - matches local commit to prevent progress loss
+        # Previously was 100, but that meant losing up to 100 files of progress on failure
+        if new_files > 0 and new_files % 50 == 0:
             try:
                 with manifest_lock:
                     manifest.save_to_gcs(include_backup=False)

@@ -31,7 +31,7 @@ spec:
             kubernetes.io/hostname: donovan-optiplex-9020m
           containers:
           - name: backup
-            image: devlowkeen/immich-backup:v0.0.4
+            image: devlowkeen/immich-backup:v0.0.5
             imagePullPolicy: Always
             command: ["python3", "/app/backup.py"]
             env:
@@ -66,7 +66,7 @@ spec:
             - name: GCS_STORAGE_CLASS
               value: "ARCHIVE"
             - name: UPLOAD_WORKERS
-              value: "3"  # Number of parallel upload threads (reduced from 4 to avoid network saturation connection timeouts)
+              value: "2"  # Number of parallel upload threads (reduced from 4 to avoid network saturation connection timeouts)
             volumeMounts:
             # Mount library PVC (read-only)
             - name: library
