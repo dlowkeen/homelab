@@ -24,6 +24,8 @@ import tempfile
 import sqlite3
 import time
 import threading
+import signal
+import atexit
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -382,14 +384,14 @@ def _process_completed_future(future, completed: int, new_files: int, skipped_fi
                 # Producer still discovering files - show discovered count as estimate
                 logger.info(f"Progress: {completed} processed (at least {completed} total discovered so far), {new_files} uploaded, {skipped_files} skipped, {len(errors)} errors")
         
-        # Commit to local DB every 100 new files (thread-safe)
-        if new_files > 0 and new_files % 100 == 0:
+        # Commit to local DB every 50 new files (thread-safe)
+        if new_files > 0 and new_files % 50 == 0:
             with manifest_lock:
                 manifest.commit()
             logger.info(f"Manifest committed locally: {new_files} new files backed up so far")
         
-        # Save manifest to GCS every 1000 new files (thread-safe)
-        if new_files > 0 and new_files % 1000 == 0:
+        # Save manifest to GCS every 100 new files (thread-safe) - more frequent to prevent progress loss
+        if new_files > 0 and new_files % 100 == 0:
             try:
                 with manifest_lock:
                     manifest.save_to_gcs(include_backup=False)
@@ -608,8 +610,31 @@ def cleanup_old_db_backups(bucket: storage.Bucket):
     logger.info(f"Database backup cleanup complete: {len(db_backups)} total, keeping {min(len(db_backups), DB_BACKUP_RETENTION)}")
 
 
+# Global manifest reference for signal handler
+_global_manifest = None
+_global_manifest_lock = None
+
+def _signal_handler(signum, frame):
+    """Handle termination signals gracefully by saving manifest"""
+    global _global_manifest, _global_manifest_lock
+    logger.warning(f"Received signal {signum}, saving manifest before exit...")
+    if _global_manifest and _global_manifest_lock:
+        try:
+            with _global_manifest_lock:
+                _global_manifest.save_to_gcs(include_backup=False)
+            logger.info("Manifest saved successfully before exit")
+        except Exception as e:
+            logger.error(f"Failed to save manifest on exit: {e}")
+    sys.exit(1)
+
 def main():
     """Main backup function"""
+    global _global_manifest, _global_manifest_lock
+    
+    # Register signal handlers for graceful termination
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
+    
     logger.info("Starting Immich backup")
     
     # Validate required environment variables
@@ -637,6 +662,23 @@ def main():
     # Load or create manifest
     manifest = BackupManifest(bucket)
     manifest.load()
+    
+    # Set global reference for signal handler
+    _global_manifest = manifest
+    # Create a lock for signal handler (use manifest's internal lock mechanism)
+    _global_manifest_lock = threading.Lock()
+    
+    # Register atexit handler as backup (in case signals don't work)
+    def save_on_exit():
+        if _global_manifest:
+            try:
+                with _global_manifest_lock:
+                    _global_manifest.save_to_gcs(include_backup=False)
+                logger.info("Manifest saved via atexit handler")
+            except Exception as e:
+                logger.error(f"Failed to save manifest via atexit: {e}")
+    
+    atexit.register(save_on_exit)
     
     # Backup library files
     logger.info("=" * 60)
