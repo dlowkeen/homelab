@@ -465,14 +465,19 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
     def file_producer():
         """Producer thread: walks directory and adds files to queue"""
         nonlocal total_files
+        files_queued = 0
         try:
             for root, dirs, files in os.walk(library_path):
                 for file_name in files:
                     file_path = Path(root) / file_name
                     total_files += 1
                     file_queue.put(file_path)  # Blocks if queue is full (backpressure)
+                    files_queued += 1  # Only incremented after successful put()
+                    if files_queued % 10 == 0:
+                        logger.info(f"Producer: discovered {total_files} files, queued {files_queued} files, queue size: {file_queue.qsize()}")
             # Signal completion with None sentinel
             file_queue.put(None)
+            logger.info(f"Producer finished: discovered {total_files} files, queued {files_queued} files")
             producer_finished.set()  # Mark producer as finished
         except Exception as e:
             logger.error(f"Error in file producer: {e}")
