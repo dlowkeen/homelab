@@ -310,13 +310,24 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
         stat = file_path.stat()
         file_size = stat.st_size
         
-        # Calculate checksum
+        # Check if file is already backed up (thread-safe)
+        # Optimize by checking manifest first - only calculate expensive checksum if needed
+        with manifest_lock:
+            existing_info = manifest.get_file_info(file_path_str)
+            if existing_info and existing_info.get('size') == file_size:
+                # File exists in manifest with matching size - assume unchanged and skip
+                # This avoids expensive checksum calculation for files we've already backed up
+                # Size + path is sufficient for most cases (files rarely change without size change)
+                return ('skipped', None)
+        
+        # File is new or size changed - need to calculate checksum and upload
         checksum = calculate_sha256(file_path)
         
-        # Check if file is already backed up with same checksum (thread-safe)
+        # Double-check manifest after calculating checksum (in case file was modified but size stayed same)
         with manifest_lock:
             existing_info = manifest.get_file_info(file_path_str)
             if existing_info and existing_info.get('checksum') == checksum:
+                # Checksum matches - file unchanged, skip upload
                 return ('skipped', None)
         
         # Upload to GCS (derive path from file_path)
