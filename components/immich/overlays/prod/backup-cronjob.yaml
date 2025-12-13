@@ -62,7 +62,7 @@ spec:
             - name: GCS_STORAGE_CLASS
               value: "ARCHIVE"
             - name: UPLOAD_WORKERS
-              value: "4"  # Number of parallel upload threads (adjust based on bandwidth)
+              value: "3"  # Number of parallel upload threads (reduced from 4 to avoid network saturation connection timeouts)
             volumeMounts:
             # Mount library PVC (read-only)
             - name: library

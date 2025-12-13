@@ -76,7 +76,9 @@ class BackupManifest:
         """Get SQLite connection, creating database if needed"""
         if self.conn is None:
             db_path = self._get_db_path()
-            self.conn = sqlite3.connect(db_path)
+            # check_same_thread=False allows connection to be used across threads
+            # We use locks (manifest_lock) to ensure thread-safe access
+            self.conn = sqlite3.connect(db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row  # Return rows as dict-like objects
             self._init_schema()
         return self.conn
@@ -312,6 +314,9 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
         logger.info(f"Uploading {file_path_str} -> {gcs_path} ({file_size:,} bytes)")
         try:
             def upload_file():
+                # upload_from_filename automatically uses resumable uploads for large files
+                # This handles timeouts better and can resume if interrupted
+                # The library will automatically retry on timeout errors
                 blob.upload_from_filename(str(file_path))
                 return True
             
