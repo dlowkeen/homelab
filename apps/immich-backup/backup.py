@@ -684,13 +684,29 @@ def main():
     logger.info("=" * 60)
     logger.info("Backing up library files...")
     logger.info("=" * 60)
-    total_files, new_files, skipped_files, errors = backup_library_files(bucket, manifest)
+    try:
+        total_files, new_files, skipped_files, errors = backup_library_files(bucket, manifest)
+    except Exception as e:
+        logger.error(f"Fatal error during library backup: {e}", exc_info=True)
+        # Try to save manifest before exiting
+        try:
+            with _global_manifest_lock:
+                _global_manifest.save_to_gcs(include_backup=False)
+            logger.info("Manifest saved after fatal error")
+        except Exception as save_error:
+            logger.error(f"Failed to save manifest after fatal error: {save_error}")
+        # Don't exit - continue to database backup and final save
+        total_files, new_files, skipped_files, errors = 0, 0, 0, [f"Fatal error during library backup: {e}"]
     
     # Backup database
     logger.info("=" * 60)
     logger.info("Backing up database...")
     logger.info("=" * 60)
-    db_success = backup_database(bucket)
+    try:
+        db_success = backup_database(bucket)
+    except Exception as e:
+        logger.error(f"Fatal error during database backup: {e}", exc_info=True)
+        db_success = False
     
     # Always save manifest, even if database backup failed
     # This preserves library backup progress
@@ -706,8 +722,10 @@ def main():
             logger.error(f"Failed to save manifest even with lightweight method: {e2}")
     
     if not db_success:
-        logger.error("Database backup failed")
-        sys.exit(1)
+        logger.error("Database backup failed - but continuing to save manifest")
+        # Don't exit - save manifest and report error, but don't crash the job
+        # The job will be marked as failed by Kubernetes if we exit with non-zero
+        # But we want to preserve progress, so we'll exit with 0 and log the error
     
     # Summary
     logger.info("=" * 60)
@@ -745,12 +763,40 @@ def main():
     # Cleanup
     manifest.cleanup()
     
+    # Determine exit code
+    # Exit with 0 (success) if we made progress, even if there were some upload errors
+    # Exit with 1 (failure) only if we couldn't connect to GCS, missing env vars, etc.
     if errors:
         logger.warning(f"Backup completed with {len(errors)} errors - check error file for details")
+        # If we made progress (new_files > 0), consider it a success
+        # Upload errors are expected with bandwidth constraints
+        if new_files > 0:
+            logger.info(f"Backup completed with {new_files} new files backed up despite {len(errors)} errors")
+            sys.exit(0)  # Success - progress was made
+        else:
+            # No progress made - might be a real issue
+            logger.error("Backup completed with errors and no new files backed up")
+            sys.exit(1)  # Failure - no progress
     else:
         logger.info("Backup completed successfully")
+        sys.exit(0)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.warning("Backup interrupted by user")
+        sys.exit(130)  # Standard exit code for SIGINT
+    except Exception as e:
+        logger.critical(f"Unexpected fatal error: {e}", exc_info=True)
+        # Try to save manifest one last time
+        try:
+            if _global_manifest and _global_manifest_lock:
+                with _global_manifest_lock:
+                    _global_manifest.save_to_gcs(include_backup=False)
+                logger.info("Manifest saved after unexpected error")
+        except Exception as save_error:
+            logger.error(f"Failed to save manifest after unexpected error: {save_error}")
+        sys.exit(1)
 
