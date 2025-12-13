@@ -4,13 +4,17 @@ metadata:
   name: immich-backup
   namespace: immich
 spec:
-  # Schedule from ConfigMap (default: daily at 3 AM)
-  schedule: "0 3 * * *"
+  # Schedule: Weekly on Sunday at 3 AM (temporarily weekly during initial large backup)
+  # TODO: Change back to daily "0 3 * * *" after initial backup completes
+  schedule: "0 3 * * 0"
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid  # Don't run if previous job is still running
   jobTemplate:
     spec:
+      # Allow job to run for up to 7 days (for large initial backups)
+      # Subsequent runs will be much faster due to incremental nature
+      activeDeadlineSeconds: 604800  # 7 days = 604800 seconds
       template:
         metadata:
           labels:
@@ -24,8 +28,8 @@ spec:
           containers:
           - name: backup
             image: devlowkeen/immich-backup:v0.0.1
-            imagePullPolicy: IfNotPresent
-            command: ["/app/backup.py"]
+            imagePullPolicy: Always
+            command: ["python3", "/app/backup.py"]
             env:
             # Library configuration
             - name: LIBRARY_PATH
