@@ -241,6 +241,17 @@ class BackupManifest:
                 pass
 
 
+def format_bytes(bytes_size: int) -> str:
+    """Format bytes into human-readable format (KB, MB, GB)"""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if bytes_size < 1024.0:
+            if unit == 'B':
+                return f"{int(bytes_size)} {unit}"
+            return f"{bytes_size:.2f} {unit}"
+        bytes_size /= 1024.0
+    return f"{bytes_size:.2f} TB"
+
+
 def calculate_sha256(file_path: Path) -> str:
     """Calculate SHA256 checksum of a file"""
     sha256_hash = hashlib.sha256()
@@ -313,7 +324,7 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
         blob = bucket.blob(gcs_path)
         
         # Upload with retry logic
-        logger.info(f"Uploading {file_path_str} -> {gcs_path} ({file_size:,} bytes)")
+        logger.info(f"Uploading {file_path_str} -> {gcs_path} ({format_bytes(file_size)})")
         try:
             def upload_file():
                 # upload_from_filename automatically uses resumable uploads for large files
