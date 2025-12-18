@@ -148,10 +148,14 @@ class BackupManifest:
         
         db_path = self._get_db_path()
         
+        # Check if database file exists before trying to upload
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(f"Manifest database file not found: {db_path}")
+        
         # Save current manifest with retry
         def upload_manifest():
             blob = self.bucket.blob(self.manifest_path)
-            blob.upload_from_filename(db_path)
+            blob.upload_from_filename(db_path, timeout=300)  # 5 minute timeout for manifest upload
             blob.storage_class = GCS_STORAGE_CLASS
             blob.patch()
             return True
@@ -230,12 +234,18 @@ class BackupManifest:
             self._file_count = cursor.fetchone()['count']
         return self._file_count
     
-    def cleanup(self):
-        """Clean up temporary database file"""
+    def cleanup(self, delete_temp_file: bool = False):
+        """
+        Clean up temporary database file.
+        
+        Args:
+            delete_temp_file: If True, delete the temp file. Default False to allow
+                             atexit handlers to save the manifest if needed.
+        """
         if self.conn:
             self.conn.close()
             self.conn = None
-        if self.temp_db_path and os.path.exists(self.temp_db_path):
+        if delete_temp_file and self.temp_db_path and os.path.exists(self.temp_db_path):
             try:
                 os.unlink(self.temp_db_path)
             except:
@@ -307,6 +317,10 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
     file_path_str = f"/{relative_path.as_posix()}"
     
     try:
+        # Check if file exists (files might be deleted between discovery and processing)
+        if not file_path.exists():
+            return ('skipped', f"File no longer exists: {file_path_str}")
+        
         # Get file stats
         stat = file_path.stat()
         file_size = stat.st_size
@@ -616,21 +630,39 @@ def backup_database(bucket: storage.Bucket) -> bool:
                 for chunk in dump_process.stdout:
                     gzip_file.write(chunk)
         
-        # Check for errors
-        dump_process.wait()
+        # Wait for process with timeout (60 minutes for large databases)
+        try:
+            dump_process.wait(timeout=3600)
+        except subprocess.TimeoutExpired:
+            dump_process.kill()
+            dump_process.wait()
+            logger.error("pg_dump timed out after 60 minutes")
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            return False
         if dump_process.returncode != 0:
             stderr = dump_process.stderr.read().decode()
             logger.error(f"pg_dump failed: {stderr}")
             os.unlink(tmp_path)
             return False
         
-        # Upload to GCS
+        # Upload to GCS with timeout (2 hours for large database backups)
         blob = bucket.blob(db_backup_name)
-        blob.upload_from_filename(tmp_path)
+        blob.upload_from_filename(tmp_path, timeout=7200)
         
-        # Set storage class
-        blob.storage_class = GCS_STORAGE_CLASS
-        blob.patch()
+        # Set storage class with retry (handle eventual consistency)
+        def set_storage_class():
+            try:
+                blob.reload()
+            except NotFound:
+                raise Exception(f"Blob not yet available after upload (eventual consistency): {db_backup_name}")
+            if not blob.exists():
+                raise Exception(f"Blob does not exist after upload: {db_backup_name}")
+            blob.storage_class = GCS_STORAGE_CLASS
+            blob.patch()
+            return True
+        
+        retry_with_backoff(set_storage_class, max_retries=3, initial_delay=1.0, max_delay=30.0)
         
         # Clean up temp file
         os.unlink(tmp_path)
@@ -682,6 +714,11 @@ def _signal_handler(signum, frame):
     logger.warning(f"Received signal {signum}, saving manifest before exit...")
     if _global_manifest and _global_manifest_lock:
         try:
+            # Check if temp file exists before trying to save
+            db_path = _global_manifest._get_db_path()
+            if not os.path.exists(db_path):
+                logger.warning(f"Manifest temp file not found at {db_path}, skipping signal handler save")
+                sys.exit(1)
             with _global_manifest_lock:
                 _global_manifest.save_to_gcs(include_backup=False)
             logger.info("Manifest saved successfully before exit")
@@ -734,6 +771,11 @@ def main():
     def save_on_exit():
         if _global_manifest:
             try:
+                # Check if temp file exists before trying to save
+                db_path = _global_manifest._get_db_path()
+                if not os.path.exists(db_path):
+                    logger.warning(f"Manifest temp file not found at {db_path}, skipping atexit save")
+                    return
                 with _global_manifest_lock:
                     _global_manifest.save_to_gcs(include_backup=False)
                 logger.info("Manifest saved via atexit handler")
@@ -822,8 +864,9 @@ def main():
             logger.error(error)
         logger.error("=" * 60)
     
-    # Cleanup
-    manifest.cleanup()
+    # Cleanup - don't delete temp file yet, let atexit handler save if needed
+    # The temp file will be cleaned up when the container exits
+    manifest.cleanup(delete_temp_file=False)
     
     # Determine exit code
     # Exit with 0 (success) if we made progress, even if there were some upload errors
