@@ -408,7 +408,7 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
 
 def _process_completed_future(future, completed: int, new_files: int, skipped_files: int, errors: List[str], 
                                manifest: BackupManifest, manifest_lock: threading.Lock, 
-                               total_files: int = None) -> Tuple[int, int, int]:
+                               total_files: int = None, last_saved_count_ref: list = None) -> Tuple[int, int, int]:
     """
     Process a completed future and update counters/logs/manifest.
     Returns: (new_files, skipped_files, completed)
@@ -434,21 +434,29 @@ def _process_completed_future(future, completed: int, new_files: int, skipped_fi
                 logger.info(f"Progress: {completed} processed (at least {completed} total discovered so far), {new_files} uploaded, {skipped_files} skipped, {len(errors)} errors")
         
         # Commit to local DB every 50 new files (thread-safe)
-        if new_files > 0 and new_files % 50 == 0:
+        # Only commit when we cross a new 50-file boundary to avoid duplicate commits
+        # Check: (new_files - 1) // 50 != new_files // 50 means we just crossed a threshold
+        if new_files > 0 and (new_files - 1) // 50 != new_files // 50:
             with manifest_lock:
                 manifest.commit()
             logger.info(f"Manifest committed locally: {new_files} new files backed up so far")
         
         # Save manifest to GCS every 50 new files (thread-safe) - matches local commit to prevent progress loss
         # Previously was 100, but that meant losing up to 100 files of progress on failure
-        if new_files > 0 and new_files % 50 == 0:
-            try:
-                with manifest_lock:
-                    manifest.save_to_gcs(include_backup=False)
-                logger.info(f"Manifest saved to GCS: {new_files} new files backed up so far")
-            except Exception as e:
-                logger.error(f"Failed to save manifest to GCS (will retry later): {e}")
-                # Don't fail the whole backup if manifest save fails
+        # Only save when we cross a new 50-file boundary to prevent duplicate saves from concurrent futures
+        # Use last_saved_count_ref to track the last saved count and only save when crossing threshold
+        if new_files > 0 and last_saved_count_ref is not None:
+            with manifest_lock:
+                # Check if we've crossed a new 50-file boundary since last save
+                current_threshold = (new_files // 50) * 50
+                if current_threshold > last_saved_count_ref[0] and current_threshold > 0:
+                    last_saved_count_ref[0] = current_threshold
+                    try:
+                        manifest.save_to_gcs(include_backup=False)
+                        logger.info(f"Manifest saved to GCS: {new_files} new files backed up so far")
+                    except Exception as e:
+                        logger.error(f"Failed to save manifest to GCS (will retry later): {e}")
+                        # Don't fail the whole backup if manifest save fails
         
         return new_files, skipped_files, completed + 1
         
@@ -476,6 +484,7 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
     skipped_files = 0
     errors = []
     manifest_lock = threading.Lock()
+    last_saved_count = 0  # Track last saved count to prevent duplicate saves
     
     # Bounded queue: limits memory usage and provides backpressure
     # Queue size = workers * 10 gives buffer for in-flight tasks
@@ -539,7 +548,7 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
                     # Only use total_files for progress if producer has finished, otherwise show "discovered so far"
                     total_for_progress = total_files if producer_finished.is_set() else None
                     new_files, skipped_files, completed = _process_completed_future(
-                        completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress
+                        completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress, [last_saved_count]
                     )
             
             # Wait if we have too many pending futures (backpressure)
@@ -551,7 +560,7 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
                         futures.remove(completed_future)
                         total_for_progress = total_files if producer_finished.is_set() else None
                         new_files, skipped_files, completed = _process_completed_future(
-                            completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress
+                            completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress, [last_saved_count]
                         )
                         break
                 else:
@@ -569,7 +578,7 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
         # Wait for all remaining futures to complete
         for future in as_completed(futures):
             new_files, skipped_files, completed = _process_completed_future(
-                future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_files
+                future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_files, [last_saved_count]
             )
     
     # Final commit to local DB
