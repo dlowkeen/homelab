@@ -54,6 +54,7 @@ IMMICH_VERSION = os.getenv('IMMICH_VERSION', 'unknown')
 DB_BACKUP_RETENTION = int(os.getenv('DB_BACKUP_RETENTION', '5'))  # Keep last 5 backups
 GCS_STORAGE_CLASS = os.getenv('GCS_STORAGE_CLASS', 'ARCHIVE')  # Coldest storage
 UPLOAD_WORKERS = int(os.getenv('UPLOAD_WORKERS', '4'))  # Number of parallel upload threads
+MAX_PENDING_FUTURES = int(os.getenv('MAX_PENDING_FUTURES', '50000'))  # Max pending futures to prevent unbounded memory growth (~10MB memory)
 
 
 class BackupManifest:
@@ -348,8 +349,15 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
             
             retry_with_backoff(upload_file, max_retries=5, initial_delay=2.0, max_delay=120.0)
             
+            # Reload blob to ensure we have the latest metadata after upload
+            blob.reload()
+            
             # Set storage class with retry
             def set_storage_class():
+                # Reload blob first to ensure it exists and we have current metadata
+                blob.reload()
+                if not blob.exists():
+                    raise Exception(f"Blob does not exist after upload: {gcs_path}")
                 blob.storage_class = GCS_STORAGE_CLASS
                 blob.patch()
                 return True
@@ -489,6 +497,11 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
     producer_thread.start()
     
     # Process files in parallel using queue
+    # Limit pending futures to prevent unbounded memory growth
+    # Default 50,000 = ~10MB memory (reasonable), configurable via MAX_PENDING_FUTURES env var
+    # This is much larger than the queue size (20) to allow executor to have a buffer
+    # but still bounded to prevent issues with millions of files
+    max_pending_futures = MAX_PENDING_FUTURES
     with ThreadPoolExecutor(max_workers=UPLOAD_WORKERS) as executor:
         futures = []
         completed = 0
@@ -501,11 +514,7 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
             if file_path is None:
                 break
             
-            # Submit file for processing
-            future = executor.submit(_process_single_file, file_path, library_path, bucket, manifest, manifest_lock)
-            futures.append(future)
-            
-            # Process completed futures periodically to free memory
+            # Process completed futures first to free memory and make room
             # Check completed futures every iteration to keep memory bounded
             for completed_future in list(futures):
                 if completed_future.done():
@@ -515,6 +524,26 @@ def backup_library_files(bucket: storage.Bucket, manifest: BackupManifest) -> Tu
                     new_files, skipped_files, completed = _process_completed_future(
                         completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress
                     )
+            
+            # Wait if we have too many pending futures (backpressure)
+            # This prevents the executor's internal queue and futures list from growing unbounded
+            while len(futures) >= max_pending_futures:
+                # Wait for at least one future to complete
+                for completed_future in list(futures):
+                    if completed_future.done():
+                        futures.remove(completed_future)
+                        total_for_progress = total_files if producer_finished.is_set() else None
+                        new_files, skipped_files, completed = _process_completed_future(
+                            completed_future, completed, new_files, skipped_files, errors, manifest, manifest_lock, total_for_progress
+                        )
+                        break
+                else:
+                    # No futures completed yet, wait a bit
+                    time.sleep(0.1)
+            
+            # Submit file for processing
+            future = executor.submit(_process_single_file, file_path, library_path, bucket, manifest, manifest_lock)
+            futures.append(future)
         
         # Wait for producer to finish to get final total count
         producer_thread.join()
