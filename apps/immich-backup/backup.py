@@ -349,13 +349,16 @@ def _process_single_file(file_path: Path, library_path: Path, bucket: storage.Bu
             
             retry_with_backoff(upload_file, max_retries=5, initial_delay=2.0, max_delay=120.0)
             
-            # Reload blob to ensure we have the latest metadata after upload
-            blob.reload()
-            
             # Set storage class with retry
             def set_storage_class():
                 # Reload blob first to ensure it exists and we have current metadata
-                blob.reload()
+                # This handles eventual consistency - blob might not be immediately available after upload
+                try:
+                    blob.reload()
+                except NotFound:
+                    # Blob not yet available due to eventual consistency, will retry
+                    raise Exception(f"Blob not yet available after upload (eventual consistency): {gcs_path}")
+                
                 if not blob.exists():
                     raise Exception(f"Blob does not exist after upload: {gcs_path}")
                 blob.storage_class = GCS_STORAGE_CLASS
