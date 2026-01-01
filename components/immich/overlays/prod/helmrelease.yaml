@@ -79,6 +79,38 @@ spec:
               - op: replace
                 path: /spec/template/spec/volumes/0/name
                 value: library
+              # Force scheduling to worker node only (not control plane)
+              - op: add
+                path: /spec/template/spec/nodeSelector
+                value:
+                  kubernetes.io/hostname: worker-01-optiplex-7050
+          # Patch immich-web deployment to schedule on worker node
+          - target:
+              kind: Deployment
+              name: immich-web
+            patch: |-
+              - op: add
+                path: /spec/template/spec/nodeSelector
+                value:
+                  kubernetes.io/hostname: worker-01-optiplex-7050
+          # Patch immich-microservices deployment to schedule on worker node
+          - target:
+              kind: Deployment
+              name: immich-microservices
+            patch: |-
+              - op: add
+                path: /spec/template/spec/nodeSelector
+                value:
+                  kubernetes.io/hostname: worker-01-optiplex-7050
+          # Patch immich-machine-learning deployment to schedule on worker node (if enabled)
+          - target:
+              kind: Deployment
+              name: immich-machine-learning
+            patch: |-
+              - op: add
+                path: /spec/template/spec/nodeSelector
+                value:
+                  kubernetes.io/hostname: worker-01-optiplex-7050
   values:
     # Configure persistence for uploads - use existing prod claim
     immich:

@@ -5,6 +5,9 @@ metadata:
 spec:
   template:
     spec:
+      # Force scheduling to worker node only (not control plane)
+      nodeSelector:
+        kubernetes.io/hostname: worker-01-optiplex-7050
       containers:
       - name: postgresql
         resources:

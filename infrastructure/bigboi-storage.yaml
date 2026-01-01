@@ -27,4 +27,4 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - donovan-optiplex-9020m 
+          - worker-01-optiplex-7050 

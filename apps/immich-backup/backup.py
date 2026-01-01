@@ -465,11 +465,11 @@ def _process_completed_future(future, completed: int, new_files: int, skipped_fi
                             if saved_thresholds_set is not None:
                                 saved_thresholds_set.add(current_threshold)
                             try:
-                                manifest.save_to_gcs(include_backup=False)
+                    manifest.save_to_gcs(include_backup=False)
                                 logger.info(f"Manifest saved to GCS: {new_files} new files backed up so far (threshold: {current_threshold})")
-                            except Exception as e:
-                                logger.error(f"Failed to save manifest to GCS (will retry later): {e}")
-                                # Don't fail the whole backup if manifest save fails
+            except Exception as e:
+                logger.error(f"Failed to save manifest to GCS (will retry later): {e}")
+                # Don't fail the whole backup if manifest save fails
                                 # Note: We don't roll back tracking on error - the next threshold (100) will retry
         
         return new_files, skipped_files, completed + 1
@@ -659,7 +659,7 @@ def backup_database(bucket: storage.Bucket) -> bool:
             dump_process.wait(timeout=3600)
         except subprocess.TimeoutExpired:
             dump_process.kill()
-            dump_process.wait()
+        dump_process.wait()
             logger.error("pg_dump timed out after 60 minutes")
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
@@ -682,8 +682,8 @@ def backup_database(bucket: storage.Bucket) -> bool:
                 raise Exception(f"Blob not yet available after upload (eventual consistency): {db_backup_name}")
             if not blob.exists():
                 raise Exception(f"Blob does not exist after upload: {db_backup_name}")
-            blob.storage_class = GCS_STORAGE_CLASS
-            blob.patch()
+        blob.storage_class = GCS_STORAGE_CLASS
+        blob.patch()
             return True
         
         retry_with_backoff(set_storage_class, max_retries=3, initial_delay=1.0, max_delay=30.0)

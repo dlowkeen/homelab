@@ -13,6 +13,9 @@ spec:
       labels:
         app: immich-valkey
     spec:
+      # Force scheduling to worker node only (not control plane)
+      nodeSelector:
+        kubernetes.io/hostname: worker-01-optiplex-7050
       containers:
       - name: redis
         image: redis:7.2-alpine

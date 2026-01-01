@@ -1,5 +1,4 @@
 resources:
-  - cilium-helmrelease.yaml
   - nginx-ingress-helmrelease.yaml
   - local-path-provisioner.yaml
   - bigboi-storage.yaml
