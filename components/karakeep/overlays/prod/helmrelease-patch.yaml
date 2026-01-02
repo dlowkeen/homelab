@@ -5,6 +5,10 @@ metadata:
   namespace: karakeep
 spec:
   values:
+    # Note: karakeep and meilisearch must stay on control plane due to PV node affinity
+    # The PVs are pinned to donovan-optiplex-9020m, so pods cannot move to worker
+    # Remove node selector to allow pods to run where the data is
+    
     karakeep:
       image: ghcr.io/karakeep-app/karakeep:0.28.0  # Upgraded and tested in dev
       dataPVCSize: 10Gi

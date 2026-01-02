@@ -1,0 +1,25 @@
+# Node Taints Configuration
+# This file documents the taints that should be applied to nodes
+# Run these commands manually to apply taints (taints are node-level, not managed by Kubernetes manifests)
+
+# Control Plane Node Taint
+# This prevents application workloads from scheduling on the control plane
+# Only pods with the appropriate toleration will be able to schedule
+#
+# To apply:
+# kubectl taint nodes donovan-optiplex-9020m node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+#
+# To remove:
+# kubectl taint nodes donovan-optiplex-9020m node-role.kubernetes.io/control-plane:NoSchedule-
+
+# Worker Node
+# No taints needed - worker node accepts all workloads
+
+# Node Labels (apply these to enable node selectors)
+#
+# Control plane:
+# kubectl label node donovan-optiplex-9020m node-type=control-plane --overwrite
+#
+# Worker:
+# kubectl label node worker-01-optiplex-7050 node-type=worker --overwrite
+

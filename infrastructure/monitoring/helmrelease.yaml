@@ -33,6 +33,13 @@ spec:
         # Retention policy
         retention: 30d
         retentionSize: 10GB
+        # Node selector to prefer control plane for monitoring components
+        nodeSelector:
+          node-type: control-plane
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
         
         # Resource limits
         resources:
@@ -63,6 +70,12 @@ spec:
     
     # Grafana configuration
     grafana:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       # Admin credentials from encrypted secret
       admin:
         existingSecret: "monitoring-secrets"
@@ -124,6 +137,13 @@ spec:
               resources:
                 requests:
                   storage: 5Gi
+      # Node selector to prefer control plane for monitoring components
+        nodeSelector:
+          node-type: control-plane
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
         
         # External URL
         externalUrl: https://grafana.donovanlowkeen.com/alertmanager
@@ -142,6 +162,12 @@ spec:
     # Kube State Metrics - collects k8s object metrics
     kubeStateMetrics:
       enabled: true
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     
     # Prometheus Operator
     prometheusOperator:
@@ -152,6 +178,13 @@ spec:
         limits:
           memory: 256Mi
           cpu: 200m
+      # Node selector to prefer control plane for monitoring components
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     
     # Default rules - includes OOMKilled alerts
     defaultRules:

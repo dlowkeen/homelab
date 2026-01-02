@@ -80,6 +80,10 @@ spec:
                 path: /spec/template/spec/volumes/0/name
                 value: library
   values:
+    # Note: immich-server and postgresql must stay on control plane due to PV node affinity
+    # Only stateless components (valkey, web) can use worker node selector
+    # server and postgresql will remain on control plane where the data is
+    
     # Configure persistence for uploads - use existing prod claim
     immich:
       persistence:
