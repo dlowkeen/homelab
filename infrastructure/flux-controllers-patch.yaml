@@ -1,0 +1,62 @@
+# Kustomize patch to add node selectors and tolerations to Flux controllers
+# This patch will be applied to Flux controller deployments managed by Flux itself
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: source-controller
+  namespace: flux-system
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kustomize-controller
+  namespace: flux-system
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-controller
+  namespace: flux-system
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-controller
+  namespace: flux-system
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+

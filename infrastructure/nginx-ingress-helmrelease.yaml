@@ -37,6 +37,10 @@ spec:
     crds: CreateReplace
   values:
     controller:
+      # Node selector to prefer worker node (stateless, can run anywhere)
+      nodeSelector:
+        node-type: worker
+      
       service:
         type: LoadBalancer
         annotations:

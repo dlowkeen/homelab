@@ -5,6 +5,10 @@ metadata:
   namespace: karakeep
 spec:
   values:
+    # Node selector to prefer worker node (after PV migration)
+    nodeSelector:
+      node-type: worker
+    
     karakeep:
       image: ghcr.io/karakeep-app/karakeep:0.28.0  # Upgraded and tested in dev
       dataPVCSize: 10Gi

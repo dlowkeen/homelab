@@ -24,6 +24,9 @@ spec:
   values:
     global:
       domain: argocd.donovanlowkeen.com
+      # Node selector to prefer worker node (stateless, can run anywhere)
+      nodeSelector:
+        node-type: worker
     
     # ArgoCD configuration
     configs:
