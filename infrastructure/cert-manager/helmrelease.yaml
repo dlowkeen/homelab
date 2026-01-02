@@ -18,7 +18,14 @@ spec:
   values:
     installCRDs: true
     
-    # Node selector to prefer control plane
+    # Global node selector and tolerations for all components
+    global:
+      nodeSelector:
+        node-type: control-plane
+      podSecurityPolicy:
+        enabled: false
+    
+    # Node selector to prefer control plane (for main cert-manager)
     nodeSelector:
       node-type: control-plane
     
@@ -27,3 +34,20 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
         effect: NoSchedule
+    
+    # Component-specific configuration
+    cainjector:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+    
+    webhook:
+      nodeSelector:
+        node-type: control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule

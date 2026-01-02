@@ -24,14 +24,9 @@ spec:
   values:
     global:
       domain: argocd.donovanlowkeen.com
-      # Node selector to prefer control plane
+      # Node selector to prefer worker node (stateless, can run anywhere)
       nodeSelector:
-        node-type: control-plane
-      # Tolerations for control plane taint (if applied)
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
+        node-type: worker
     
     # ArgoCD configuration
     configs:

@@ -37,14 +37,9 @@ spec:
     crds: CreateReplace
   values:
     controller:
-      # Node selector to prefer control plane (can run on either, but prefer control plane)
+      # Node selector to prefer worker node (stateless, can run anywhere)
       nodeSelector:
-        node-type: control-plane
-      # Tolerations for control plane taint (if applied)
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
+        node-type: worker
       
       service:
         type: LoadBalancer
