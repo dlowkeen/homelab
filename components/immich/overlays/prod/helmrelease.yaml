@@ -28,6 +28,8 @@ spec:
         images:
           - name: ghcr.io/immich-app/immich-server
             newTag: v2.3.1
+          - name: ghcr.io/immich-app/immich-machine-learning
+            newTag: v2.3.1
         patches:
           # Patch immich-server deployment to add DB env vars
           - target:
