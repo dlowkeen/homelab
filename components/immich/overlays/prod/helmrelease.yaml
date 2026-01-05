@@ -157,13 +157,14 @@ spec:
           cpu: "200m"
     
     machine-learning:
+      enabled: true
+      image:
+        tag: "v2.3.1"  # Match server version
       resources:
         requests:
-          memory: "256Mi"
-          cpu: "50m"
+          memory: "1Gi"
+          cpu: "500m"
         limits:
-          memory: "512Mi"
-          cpu: "200m"
-      # Disable ML initially to save resources - you can enable later
-      enabled: false
+          memory: "4Gi"
+          cpu: "2000m"
 
