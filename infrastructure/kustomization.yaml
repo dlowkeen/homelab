@@ -6,3 +6,4 @@ resources:
   - cilium-gateway.yaml
   - metallb.yaml
   - ip-address-pool.yaml
+  - nvidia-device-plugin.yaml
