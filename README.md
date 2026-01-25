@@ -66,6 +66,9 @@ kubectl label node donovan-optiplex-9020m node-type=control-plane --overwrite
 
 # Worker node
 kubectl label node worker-01-optiplex-7050 node-type=worker --overwrite
+
+# GPU worker node (Dell XPS 8930)
+kubectl label node donovan-xps-8930 node-type=gpu --overwrite
 ```
 
 ## Node Taints (Optional)
@@ -75,6 +78,9 @@ To enforce strict scheduling, apply taints:
 ```bash
 # Taint control plane to prevent application workloads
 kubectl taint nodes donovan-optiplex-9020m node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+
+# Taint GPU node to prevent non-GPU workloads
+kubectl taint nodes donovan-xps-8930 nvidia.com/gpu:NoSchedule --overwrite
 ```
 
 **Note:** If you apply the control plane taint, ensure all infrastructure pods (Flux, cert-manager, monitoring, etc.) have the appropriate tolerations configured in their HelmRelease values.
