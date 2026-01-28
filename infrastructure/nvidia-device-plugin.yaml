@@ -54,9 +54,14 @@ spec:
           mountPath: /var/lib/kubelet/device-plugins
         - name: dev
           mountPath: /dev
-        - name: nvidia-libs
-          mountPath: /usr/lib/x86_64-linux-gnu
+        - name: nvidia-ml-lib
+          mountPath: /usr/local/lib/libnvidia-ml.so.535.288.01
           readOnly: true
+        env:
+          - name: FAIL_ON_INIT_ERROR
+            value: "false"
+          - name: LD_LIBRARY_PATH
+            value: "/usr/local/lib"
       volumes:
       - name: device-plugin
         hostPath:
@@ -64,7 +69,7 @@ spec:
       - name: dev
         hostPath:
           path: /dev
-      - name: nvidia-libs
+      - name: nvidia-ml-lib
         hostPath:
-          path: /usr/lib/x86_64-linux-gnu
-          type: Directory
+          path: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.535.288.01
+          type: File
