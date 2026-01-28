@@ -15,29 +15,37 @@ spec:
     spec:
       containers:
       - name: ollama-ui
-        image: ghcr.io/jakobhoeg/nextjs-ollama-llm-ui:latest
+        image: ghcr.io/open-webui/open-webui:main
         ports:
-        - containerPort: 3000
+        - containerPort: 8080
           name: http
         env:
         - name: OLLAMA_BASE_URL
           value: "http://ollama:11434"
+        - name: WEBUI_AUTH
+          value: "False"  # Disable auth for homelab
         resources:
           limits:
-            memory: 512Mi
+            memory: 1Gi
             cpu: 1
           requests:
-            memory: 256Mi
+            memory: 512Mi
             cpu: 500m
+        volumeMounts:
+        - name: webui-data
+          mountPath: /app/backend/data
         livenessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: webui-data
+        emptyDir: {}  # Chat history stored in memory, resets on restart

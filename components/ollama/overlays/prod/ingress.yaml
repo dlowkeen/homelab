@@ -7,6 +7,8 @@ metadata:
     # Increase timeouts for LLM responses (can take a while)
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # Increase body size for file uploads
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 spec:
   ingressClassName: nginx
   rules:
@@ -19,4 +21,4 @@ spec:
           service:
             name: ollama-ui
             port:
-              number: 3000
+              number: 8080
