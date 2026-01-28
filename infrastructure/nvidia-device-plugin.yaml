@@ -40,33 +40,22 @@ spec:
       # be rescheduled after a failure.
       # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
       priorityClassName: "system-node-critical"
+      # Use nvidia runtime instead of manual mounts
+      runtimeClassName: nvidia
       containers:
       - image: nvcr.io/nvidia/k8s-device-plugin:v0.14.5
         name: nvidia-device-plugin-ctr
         env:
           - name: FAIL_ON_INIT_ERROR
             value: "false"
-          - name: LD_LIBRARY_PATH
-            value: "/usr/local/lib"
         securityContext:
-          # Device plugin needs privileged access to enumerate GPUs
-          privileged: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         volumeMounts:
         - name: device-plugin
           mountPath: /var/lib/kubelet/device-plugins
-        - name: dev
-          mountPath: /dev
-        - name: nvidia-ml-lib
-          mountPath: /usr/local/lib/libnvidia-ml.so.1
-          readOnly: true
       volumes:
       - name: device-plugin
         hostPath:
           path: /var/lib/kubelet/device-plugins
-      - name: dev
-        hostPath:
-          path: /dev
-      - name: nvidia-ml-lib
-        hostPath:
-          path: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.535.288.01
-          type: File
