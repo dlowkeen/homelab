@@ -28,9 +28,9 @@ spec:
       labels:
         name: nvidia-device-plugin-ds
     spec:
-      # Only run on the GPU node (donovan-xps-8930)
+      # Only run on the GPU node (donovan-xps-8930-gpu)
       nodeSelector:
-        kubernetes.io/hostname: donovan-xps-8930
+        kubernetes.io/hostname: donovan-xps-8930-gpu
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists
