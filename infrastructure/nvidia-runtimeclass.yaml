@@ -1,0 +1,33 @@
+# NVIDIA RuntimeClass
+# 
+# This tells Kubernetes to use the nvidia-container-runtime instead of the default
+# runc runtime for pods that specify: runtimeClassName: nvidia
+#
+# The nvidia-container-runtime injects:
+# - /dev/nvidia* device files
+# - NVIDIA libraries (libcuda.so, libnvidia-ml.so, etc.)
+# - Environment variables (NVIDIA_VISIBLE_DEVICES, etc.)
+# - nvidia-smi and other CUDA tools
+#
+# Prerequisites:
+# - NVIDIA drivers installed on GPU nodes
+# - nvidia-container-toolkit installed on GPU nodes
+# - containerd configured with nvidia runtime (via nvidia-ctk runtime configure)
+# - NVIDIA device plugin running (to register GPUs with Kubernetes)
+#
+# Usage in pods:
+#   spec:
+#     runtimeClassName: nvidia
+#     containers:
+#     - name: gpu-app
+#       resources:
+#         limits:
+#           nvidia.com/gpu: 1
+#
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: nvidia
+# The handler must match the runtime name in containerd's config
+# (defined in /etc/containerd/conf.d/99-nvidia.toml)
+handler: nvidia

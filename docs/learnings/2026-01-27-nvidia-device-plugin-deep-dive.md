@@ -47,26 +47,45 @@ After successfully installing NVIDIA drivers and the nvidia-container-toolkit, w
 
 3. **Containerd Runtime Configuration**
    
-   The `nvidia-ctk runtime configure` command created:
+   The `nvidia-ctk runtime configure --runtime=containerd` command created:
    
-   `/etc/containerd/conf.d/99-nvidia.toml`:
+   `/etc/containerd/conf.d/99-nvidia.toml` (comprehensive config, key sections shown):
    ```toml
-   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-     [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-       BinaryName = "/usr/bin/nvidia-container-runtime"
+   version = 2
+   
+   [plugins]
+     [plugins."io.containerd.grpc.v1.cri"]
+       # ... many CRI plugin settings ...
+       
+       [plugins."io.containerd.grpc.v1.cri".containerd]
+         # ... containerd settings ...
+         
+         [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+           
+           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+             runtime_type = "io.containerd.runc.v2"
+             sandbox_mode = "podsandbox"
+             
+             [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+               BinaryName = "/usr/bin/nvidia-container-runtime"
+               SystemdCgroup = true
    ```
    
-   `/etc/containerd/config.toml`:
-   ```toml
-   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-     runtime_type = "io.containerd.runc.v2"
-     
-     [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-       BinaryName = "/usr/bin/nvidia-container-runtime"
+   **Note:** The actual file is ~160 lines with full CRI plugin configuration. The key parts are:
+   - Defines the `nvidia` runtime under `runtimes.nvidia`
+   - Sets `BinaryName = "/usr/bin/nvidia-container-runtime"`
+   - Enables `SystemdCgroup = true` for kubelet compatibility
    
+   We also manually edited `/etc/containerd/config.toml` to set the default runtime:
+   ```toml
    [plugins."io.containerd.grpc.v1.cri".containerd]
      default_runtime_name = "nvidia"
    ```
+   
+   **Important:** The `nvidia-ctk runtime configure` command does NOT set `default_runtime_name`. 
+   It only creates the runtime definition in `/etc/containerd/conf.d/99-nvidia.toml`. 
+   Setting `default_runtime_name = "nvidia"` was a manual edit we made, but as we discovered, 
+   this setting is not reliably honored by Kubernetes CRI.
 
 4. **Direct Container Test Working**
    ```bash
@@ -635,7 +654,691 @@ This tells us:
 
 ---
 
-## Workload Considerations
+## RuntimeClass vs GPU Operator: Detailed Comparison
+
+Now that we understand the problem (device plugin works, but workloads need nvidia runtime), let's compare the two primary solutions for enabling GPU access in workload pods.
+
+### Quick Summary
+
+| Aspect | RuntimeClass | GPU Operator |
+|--------|-------------|--------------|
+| **Setup Time** | 5-10 minutes | 30-60 minutes |
+| **Initial Complexity** | Low | Medium-High |
+| **Ongoing Maintenance** | Minimal | Low-Medium |
+| **Resource Overhead** | ~0 MB | ~500-1000 MB |
+| **Components Added** | 1 (RuntimeClass object) | 10+ (Operator, controllers, DaemonSets) |
+| **Best For** | Homelabs, small clusters | Multi-node production clusters |
+| **Driver Management** | Manual (you handle it) | Automated (operator can install) |
+| **Requires Pre-installed** | Drivers, toolkit, containerd config | Just Kubernetes |
+| **Learning Curve** | Minimal | Moderate |
+| **Troubleshooting** | Simple, transparent | Complex, layered |
+
+---
+
+### Option 1: RuntimeClass (Recommended for Homelabs)
+
+#### What It Is
+
+RuntimeClass is a Kubernetes-native resource that tells kubelet which container runtime to use for a pod. It's a simple pointer that says "use the nvidia runtime instead of runc for this pod."
+
+**Conceptually:**
+```
+Pod spec says: "use RuntimeClass: nvidia"
+    ↓
+Kubernetes tells containerd: "use the nvidia runtime handler"
+    ↓
+containerd uses nvidia-container-runtime
+    ↓
+nvidia-container-runtime hooks inject GPU access
+    ↓
+Pod gets /dev/nvidia*, libraries, and nvidia-smi
+```
+
+#### Setup Steps
+
+**Step 1: Verify nvidia runtime is configured** (we already have this)
+```bash
+# Check /etc/containerd/conf.d/99-nvidia.toml exists
+sudo cat /etc/containerd/conf.d/99-nvidia.toml | grep -A 5 "runtimes.nvidia"
+```
+
+**Step 2: Create RuntimeClass** (one-time, 30 seconds)
+```yaml
+# runtime-class-nvidia.yaml
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: nvidia
+handler: nvidia  # Must match the runtime name in containerd config
+```
+
+```bash
+kubectl apply -f runtime-class-nvidia.yaml
+```
+
+**Step 3: Use it in pods**
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-workload
+spec:
+  runtimeClassName: nvidia  # Just add this one line!
+  containers:
+  - name: app
+    image: nvidia/cuda:12.2.0-base-ubuntu22.04
+    command: ["nvidia-smi"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+```
+
+**That's it!** Three simple steps.
+
+#### Pros
+
+1. **Extremely Simple**
+   - One YAML file with 5 lines
+   - No new controllers or operators to manage
+   - Native Kubernetes resource (stable since K8s 1.20)
+
+2. **Zero Resource Overhead**
+   - RuntimeClass is just metadata, no running components
+   - No additional pods or controllers
+   - No memory or CPU usage
+
+3. **Transparent and Debuggable**
+   - If something breaks, it's obvious: either the runtime isn't configured or the pod spec is wrong
+   - No layers of abstraction to debug through
+   - `kubectl describe pod` shows exactly what runtime was used
+
+4. **Fine-Grained Control**
+   - You choose which pods use the nvidia runtime
+   - Other pods continue using standard runc runtime
+   - No global changes to cluster behavior
+
+5. **Works Immediately**
+   - If your containerd config is correct, it works instantly
+   - No waiting for operators to reconcile
+   - No complex state management
+
+#### Cons
+
+1. **Manual Driver Management**
+   - You must install NVIDIA drivers yourself (which you already did)
+   - You must update drivers manually when needed
+   - No automated driver lifecycle
+
+2. **Manual Node Prep**
+   - Each new GPU node needs manual driver installation
+   - Each node needs containerd configuration
+   - For 1-2 nodes this is fine, for 10+ nodes it's tedious
+
+3. **No Monitoring Built-In**
+   - RuntimeClass doesn't provide GPU metrics
+   - You'd need to set up separate monitoring (DCGM exporter, etc.)
+   - No dashboards or pre-configured alerts
+
+4. **Pod-Level Configuration Required**
+   - Every GPU pod needs `runtimeClassName: nvidia` in its spec
+   - Easy to forget and have pods fail
+   - Need to document for other users
+
+5. **No Upgrade Automation**
+   - When NVIDIA releases new drivers, you manually upgrade
+   - When nvidia-container-toolkit updates, you manually upgrade
+   - No rollback mechanisms if something breaks
+
+#### Resource Usage
+
+```
+RuntimeClass resource: ~1 KB (just metadata)
+Running components: 0
+Memory overhead: 0 MB
+CPU overhead: 0
+```
+
+#### Initial Setup Cost
+
+- **Time:** 5-10 minutes
+  - 2 minutes: Create RuntimeClass YAML
+  - 1 minute: Apply to cluster
+  - 2 minutes: Test with sample pod
+  - 5 minutes: Update existing workload specs
+
+- **Complexity:** Very Low
+  - Prerequisites: Basic kubectl knowledge
+  - Debugging: Simple (check pod spec, check containerd config)
+
+- **Documentation needed:** 1 paragraph ("add runtimeClassName: nvidia to GPU pods")
+
+#### When to Use RuntimeClass
+
+✅ **Perfect for:**
+- Homelabs (1-3 nodes)
+- Learning/experimentation
+- Small production clusters where you control all workloads
+- When you want maximum transparency and control
+- When resource efficiency matters
+
+❌ **Not ideal for:**
+- Large clusters (10+ nodes) where manual node prep is tedious
+- Environments where non-admin users deploy GPU workloads (they need to remember runtimeClassName)
+- When you want automated driver management
+
+---
+
+### Option 2: GPU Operator (Enterprise Standard)
+
+#### What It Is
+
+The NVIDIA GPU Operator is a Kubernetes operator that manages the entire GPU software stack as containers. Instead of installing drivers and tools on the host, it deploys them as DaemonSets that run on GPU nodes.
+
+**Components it deploys:**
+1. **nvidia-driver-daemonset** - Installs/manages NVIDIA drivers (optional)
+2. **nvidia-container-toolkit-daemonset** - Installs nvidia-container-toolkit
+3. **nvidia-device-plugin-daemonset** - Manages the device plugin (replaces our manual one)
+4. **nvidia-dcgm-exporter** - Exports GPU metrics to Prometheus
+5. **gpu-feature-discovery** - Labels nodes with GPU capabilities
+6. **node-status-exporter** - Monitors node GPU health
+7. **Operator controller** - Orchestrates all the above
+
+**Conceptually:**
+```
+Deploy GPU Operator
+    ↓
+Operator detects GPU nodes
+    ↓
+Deploys driver DaemonSet (optional, can use host drivers)
+    ↓
+Deploys toolkit DaemonSet (configures containerd automatically)
+    ↓
+Deploys device plugin
+    ↓
+Configures RuntimeClass automatically
+    ↓
+Pods automatically use nvidia runtime (via admission webhook or RuntimeClass)
+    ↓
+Everything just works™
+```
+
+#### Setup Steps
+
+**Step 1: Install the operator** (5-10 minutes)
+
+```bash
+# Add NVIDIA Helm repo
+helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
+helm repo update
+
+# Install GPU Operator
+helm install --wait --generate-name \
+  -n gpu-operator --create-namespace \
+  nvidia/gpu-operator \
+  --set driver.enabled=false  # Use host drivers (since you already installed them)
+```
+
+**Step 2: Wait for operator to deploy everything** (5-10 minutes)
+
+The operator will automatically:
+- Detect your GPU node
+- Configure containerd
+- Deploy device plugin
+- Set up monitoring
+- Create RuntimeClass
+
+```bash
+# Watch it deploy
+kubectl get pods -n gpu-operator -w
+```
+
+**Step 3: Use GPU in pods** (automatic!)
+
+With default config, pods requesting GPUs automatically get nvidia runtime. You might not even need `runtimeClassName`:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-workload
+spec:
+  # runtimeClassName might not even be needed!
+  containers:
+  - name: app
+    image: nvidia/cuda:12.2.0-base-ubuntu22.04
+    command: ["nvidia-smi"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+```
+
+The operator's admission webhook can automatically inject the runtime class.
+
+#### Pros
+
+1. **Fully Automated**
+   - Everything deployed as containers
+   - Automatic configuration of all nodes
+   - Self-healing (if components crash, they restart)
+
+2. **Scales Well**
+   - Add a new GPU node? Operator automatically configures it
+   - 1 node or 100 nodes, same amount of work
+   - No manual node preparation
+
+3. **Built-in Monitoring**
+   - DCGM exporter provides GPU metrics (utilization, temperature, power, memory)
+   - Integrates with Prometheus/Grafana
+   - Pre-built dashboards available
+
+4. **Professional Support**
+   - Official NVIDIA product
+   - Regular updates and security patches
+   - Documentation and community support
+
+5. **Automated Upgrades**
+   - Update the operator, it updates all components
+   - Can manage driver upgrades (rolling updates)
+   - Rollback support if issues occur
+
+6. **Node Labeling**
+   - Automatically labels nodes with GPU info (model, memory, CUDA version, etc.)
+   - Makes scheduling smarter
+   - Useful for heterogeneous GPU clusters
+
+7. **User Friendly**
+   - End users don't need to know about RuntimeClass
+   - Just request `nvidia.com/gpu` and it works
+   - Reduces cognitive load
+
+#### Cons
+
+1. **Significant Complexity**
+   - 10+ new components to understand
+   - Operator pattern adds abstraction layers
+   - CRDs, controllers, webhooks, DaemonSets...
+
+2. **Heavy Resource Usage**
+   - Operator controller: ~200-300 MB RAM
+   - Device plugin: ~50-100 MB RAM
+   - DCGM exporter: ~100-200 MB RAM
+   - GPU Feature Discovery: ~50 MB RAM
+   - Node status exporter: ~50 MB RAM
+   - **Total: ~500-1000 MB RAM overhead**
+
+3. **Harder to Debug**
+   - When something fails, need to debug operator logic
+   - Multiple layers: Operator → DaemonSet → containerd → runtime
+   - Logs spread across many pods
+
+4. **Overkill for Small Deployments**
+   - For 1-2 nodes, you're managing a complex operator just to avoid 10 minutes of manual work
+   - Most features (auto-scaling, heterogeneous clusters) not needed
+
+5. **Deployment Dependency**
+   - Need Helm (or understand operator YAMLs)
+   - Need to manage operator upgrades
+   - Another component that can break
+
+6. **Learning Curve**
+   - Need to understand operators
+   - Need to understand CRDs and custom resources
+   - More concepts to learn
+
+#### Resource Usage
+
+```
+Operator components: ~500-1000 MB RAM
+Running pods: 6-10 DaemonSets + 1 Deployment (operator controller)
+CPU overhead: ~0.5-1.0 cores (monitoring and controllers)
+```
+
+On your single GPU node:
+- **Without GPU Operator:** 1 pod (device plugin) using ~50 MB
+- **With GPU Operator:** 6-7 pods using ~600-800 MB
+
+#### Initial Setup Cost
+
+- **Time:** 30-60 minutes
+  - 5 minutes: Understand operator options
+  - 5 minutes: Install Helm chart
+  - 10 minutes: Wait for everything to deploy
+  - 10 minutes: Verify all components are healthy
+  - 10 minutes: Test GPU workloads
+  - 10 minutes: Understand how to troubleshoot when things go wrong
+
+- **Complexity:** Medium-High
+  - Prerequisites: Helm, understanding operators, debugging distributed systems
+  - Debugging: Complex (operator logs, DaemonSet logs, webhook logs, containerd logs)
+
+- **Documentation needed:** Multiple pages (operator config, troubleshooting, monitoring setup)
+
+#### When to Use GPU Operator
+
+✅ **Perfect for:**
+- Large clusters (10+ GPU nodes)
+- Production environments with SLAs
+- Dynamic clusters (nodes added/removed frequently)
+- Multi-tenant clusters (different users deploying GPU workloads)
+- Heterogeneous GPU clusters (different GPU models)
+- When you want automated driver management
+- When you want built-in monitoring
+
+❌ **Overkill for:**
+- Single GPU node homelabs
+- Learning/experimentation (hides important details)
+- Resource-constrained environments
+- When you want maximum transparency
+
+---
+
+### Side-by-Side Comparison
+
+#### Scenario 1: Initial Setup
+
+**RuntimeClass:**
+```bash
+# Create RuntimeClass (30 seconds)
+cat <<EOF | kubectl apply -f -
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: nvidia
+handler: nvidia
+EOF
+
+# Test it (1 minute)
+kubectl run gpu-test --rm -it --image=nvidia/cuda:12.2.0-base-ubuntu22.04 \
+  --overrides='{"spec":{"runtimeClassName":"nvidia","containers":[{"name":"gpu-test","image":"nvidia/cuda:12.2.0-base-ubuntu22.04","command":["nvidia-smi"],"resources":{"limits":{"nvidia.com/gpu":"1"}}}]}}'
+
+# Total time: 2 minutes
+# Lines of YAML: 5
+# New components: 0
+```
+
+**GPU Operator:**
+```bash
+# Add Helm repo (2 minutes)
+helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
+helm repo update
+
+# Install operator (10 minutes - includes waiting for everything to deploy)
+helm install --wait --generate-name \
+  -n gpu-operator --create-namespace \
+  nvidia/gpu-operator \
+  --set driver.enabled=false
+
+# Wait for all DaemonSets to be ready (5-10 minutes)
+kubectl wait --for=condition=ready pod -l app=nvidia-device-plugin-daemonset -n gpu-operator --timeout=600s
+
+# Test it (2 minutes)
+kubectl run gpu-test --rm -it --image=nvidia/cuda:12.2.0-base-ubuntu22.04 \
+  --overrides='{"spec":{"containers":[{"name":"gpu-test","image":"nvidia/cuda:12.2.0-base-ubuntu22.04","command":["nvidia-smi"],"resources":{"limits":{"nvidia.com/gpu":"1"}}}]}}'
+
+# Total time: 15-25 minutes
+# Lines of YAML: Hundreds (managed by Helm)
+# New components: 6-10 pods
+```
+
+#### Scenario 2: Adding a Second GPU Node
+
+**RuntimeClass:**
+```bash
+# On the new node (10 minutes of work):
+# 1. Install NVIDIA drivers
+sudo apt install -y nvidia-driver-535
+
+# 2. Install nvidia-container-toolkit
+sudo apt install -y nvidia-container-toolkit
+
+# 3. Configure containerd
+sudo nvidia-ctk runtime configure --runtime=containerd
+sudo systemctl restart containerd
+
+# 4. Join the node to the cluster
+# (your normal node join process)
+
+# 5. Label the node (if needed)
+kubectl label node new-gpu-node accelerator=nvidia
+
+# That's it! RuntimeClass automatically works on the new node.
+```
+
+**GPU Operator:**
+```bash
+# On the new node (0 minutes of work):
+# Just join the node to the cluster with a GPU
+
+# The operator detects the GPU and automatically:
+# - Installs drivers (if enabled)
+# - Configures containerd
+# - Deploys device plugin
+# - Sets up monitoring
+
+# You do nothing. It just works.
+```
+
+**Winner for 2 nodes:** Tie (RuntimeClass is still fast for 2 nodes)  
+**Winner for 10+ nodes:** GPU Operator (automation pays off)
+
+#### Scenario 3: Troubleshooting "GPU not detected"
+
+**RuntimeClass:**
+```bash
+# Debug steps are straightforward:
+
+# 1. Is the nvidia runtime configured?
+sudo cat /etc/containerd/conf.d/99-nvidia.toml | grep nvidia
+
+# 2. Is the RuntimeClass being used?
+kubectl describe pod my-gpu-pod | grep "Runtime Class"
+
+# 3. Are drivers loaded?
+nvidia-smi
+
+# 4. Is containerd using the right runtime?
+sudo journalctl -u containerd | grep nvidia
+
+# That's it. 4 clear steps, clear failure points.
+```
+
+**GPU Operator:**
+```bash
+# Debug steps are layered:
+
+# 1. Is the operator healthy?
+kubectl get pods -n gpu-operator
+
+# 2. Which component is failing?
+kubectl logs -n gpu-operator -l app=nvidia-operator-validator
+
+# 3. Are drivers installed? (if operator manages them)
+kubectl logs -n gpu-operator -l app=nvidia-driver-daemonset
+
+# 4. Is the device plugin running?
+kubectl logs -n gpu-operator -l app=nvidia-device-plugin-daemonset
+
+# 5. Is containerd configured?
+# (Need to check on the node or via node-status-exporter)
+
+# 6. Are there issues with the admission webhook?
+kubectl logs -n gpu-operator -l app=gpu-operator
+
+# 7. Is the RuntimeClass created?
+kubectl get runtimeclass
+
+# Many more moving parts to check.
+```
+
+**Winner:** RuntimeClass (simpler debugging)
+
+#### Scenario 4: Monitoring GPU Usage
+
+**RuntimeClass:**
+```bash
+# No built-in monitoring. You'd need to deploy your own:
+
+# Option 1: Deploy DCGM exporter manually
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/dcgm-exporter/main/deployment/dcgm-exporter.yaml
+
+# Option 2: Use node-exporter with nvidia_gpu collector
+
+# Then configure Prometheus to scrape it.
+# No pre-built dashboards.
+```
+
+**GPU Operator:**
+```bash
+# DCGM exporter is included and configured!
+
+# Metrics automatically available in Prometheus (if you have it):
+# - GPU utilization
+# - GPU memory usage
+# - Temperature
+# - Power consumption
+# - More...
+
+# Pre-built Grafana dashboards available:
+# https://grafana.com/grafana/dashboards/12239
+```
+
+**Winner:** GPU Operator (monitoring included)
+
+---
+
+### Recommendation for Your Homelab
+
+Given your cluster characteristics:
+- **1 GPU node** (Dell XPS 8930)
+- **Homelab environment** (learning-focused)
+- **You already installed drivers and toolkit**
+- **Resource-conscious**
+- **Want to understand how things work**
+
+**I recommend: RuntimeClass**
+
+#### Why RuntimeClass for Your Setup
+
+1. **Drivers Already Installed**
+   - You already did the hard work (drivers, toolkit)
+   - GPU Operator would just add unnecessary layers on top
+   - You're not gaining the main benefit (automated driver management)
+
+2. **Single Node**
+   - The "automation for many nodes" benefit doesn't apply
+   - 5 minutes to setup RuntimeClass vs 30 minutes for operator
+   - Not worth the complexity for one node
+
+3. **Learning Value**
+   - You've already learned how the nvidia runtime works
+   - RuntimeClass maintains that transparency
+   - GPU Operator would hide what you just learned
+
+4. **Resource Efficiency**
+   - Your device plugin uses ~50 MB
+   - GPU Operator would add ~500-800 MB overhead
+   - That's significant in a homelab
+
+5. **Simple to Maintain**
+   - RuntimeClass has no ongoing maintenance
+   - GPU Operator needs updates, monitoring, troubleshooting
+
+#### When You'd Switch to GPU Operator
+
+If you find yourself:
+- Adding 3+ GPU nodes
+- Wanting automated driver updates
+- Needing GPU metrics/monitoring
+- Running a multi-tenant cluster
+- Wanting to stop managing node configuration
+
+Then revisit GPU Operator. But for now, RuntimeClass is perfect.
+
+---
+
+### Implementation Guide: Setting Up RuntimeClass
+
+Since I'm recommending RuntimeClass, here's exactly what to do:
+
+**Step 1: Create RuntimeClass**
+
+Create `infrastructure/nvidia-runtimeclass.yaml`:
+```yaml
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: nvidia
+handler: nvidia
+```
+
+Apply it:
+```bash
+kubectl apply -f infrastructure/nvidia-runtimeclass.yaml
+```
+
+Verify:
+```bash
+kubectl get runtimeclass nvidia
+```
+
+**Step 2: Update Your GPU Test Pods**
+
+Modify `docs/learnings/gpu-test-pod.yaml` to use the RuntimeClass:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-test-smi
+spec:
+  runtimeClassName: nvidia  # Add this line
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: donovan-xps-8930-gpu
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  containers:
+  - name: cuda-test
+    image: nvidia/cuda:12.2.0-base-ubuntu22.04
+    command: ["nvidia-smi"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+```
+
+**Step 3: Test It**
+
+```bash
+kubectl apply -f docs/learnings/gpu-test-pod.yaml
+sleep 10
+kubectl logs gpu-test-smi
+
+# Should now show nvidia-smi output!
+```
+
+**Step 4: Update Immich ML**
+
+When you want Immich ML to use the GPU, you'll need to:
+
+1. Check if the Immich Helm chart supports `runtimeClassName` (many do)
+2. Add it to your HelmRelease values:
+
+```yaml
+machine-learning:
+  enabled: true
+  runtimeClassName: nvidia  # Add this
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+```
+
+Or if the chart doesn't support it, use a kustomize patch in your overlay.
+
+**That's it!** Your cluster is now fully GPU-enabled with minimal overhead and maximum transparency.
+
+---
 
 ### What We Achieved
 
@@ -707,16 +1410,38 @@ spec:
 **Pro:** Clean, explicit, Kubernetes-native approach  
 **Con:** Requires Kubernetes 1.20+ for GA RuntimeClass API
 
-#### Option 2: NVIDIA GPU Operator (Enterprise)
+#### Option 2: NVIDIA GPU Operator (Enterprise Standard)
 
 The NVIDIA GPU Operator automates:
-- Driver installation
+- Driver installation (optional)
 - Device plugin deployment
 - Runtime configuration
 - Automatic runtime injection for GPU pods
+- Monitoring and metrics collection
+- Upgrades and lifecycle management
 
-**Pro:** Fully automated, handles everything  
-**Con:** Complex, overkill for single-node setups
+**Pro:** Fully automated, handles everything, enterprise-grade, scales to many nodes  
+**Con:** Complex, heavyweight (~500MB+ of components), overkill for single-node setups, requires understanding Kubernetes operators
+
+**When to use GPU Operator:**
+- ✅ **Multi-node GPU clusters** - Automates deployment across many nodes
+- ✅ **Production environments** - Handles upgrades, monitoring, and lifecycle
+- ✅ **Dynamic clusters** - Automatically configures new GPU nodes as they're added
+- ✅ **Enterprise/team environments** - Standardized, supported approach
+- ✅ **Mixed GPU types** - Handles different GPU models/drivers across nodes
+- ❌ **Single GPU node homelab** - Overkill, manual setup is simpler and more educational
+- ❌ **Learning/experimentation** - GPU Operator hides implementation details you might want to understand
+
+**Why we didn't use it:**
+- Our homelab has a single GPU node
+- We wanted to understand the underlying mechanics
+- Manual setup is more transparent and easier to troubleshoot
+- Avoids the complexity of managing an operator
+- Lower resource overhead (device plugin only vs full operator stack)
+
+**If you're running a production cluster with multiple GPU nodes**, the GPU Operator is absolutely the recommended approach. It's what most enterprises use, and it's well-supported by NVIDIA.
+
+**For homelabs and learning environments**, manual setup (what we did) is perfectly valid and arguably better for understanding how everything works.
 
 #### Option 3: Manual Mounts (Not Recommended for Production)
 
@@ -759,9 +1484,24 @@ spec:
 ### Our Homelab Approach
 
 For our homelab with a single GPU node, we're using:
-- ✅ Device plugin with manual mounts (for GPU detection)
-- 🔄 Future: Add RuntimeClass for workload pods (cleaner than manual mounts)
-- 🔄 For Immich ML: Will need to configure the pod to use RuntimeClass or add manual mounts
+- ✅ **Device plugin with manual mounts** (for GPU detection) - This is what we documented
+- 🔄 **Future: Add RuntimeClass** for workload pods (cleaner than manual mounts per-pod)
+- 🔄 **For Immich ML**: Will need to configure the pod to use RuntimeClass or add manual mounts
+
+**Why this approach over GPU Operator?**
+1. **Simplicity** - One DaemonSet vs entire operator framework
+2. **Transparency** - We understand exactly what's happening
+3. **Resource efficiency** - Minimal overhead for single node
+4. **Educational** - Learned how NVML, runtimes, and device plugins work
+5. **Sufficient** - Meets our needs without additional complexity
+
+**Trade-off:** If we add more GPU nodes, we'd need to manually configure each one. At 3+ GPU nodes, the GPU Operator would likely be worth the complexity.
+
+**Industry perspective:**
+- **Small clusters (1-2 GPU nodes):** Manual setup is common and practical
+- **Medium clusters (3-10 GPU nodes):** Mixed - some use GPU Operator, some use manual
+- **Large clusters (10+ GPU nodes):** GPU Operator is standard
+- **Cloud environments (GKE, EKS, AKS):** Cloud provider's managed GPU support (may use GPU Operator under the hood)
 
 ---
 

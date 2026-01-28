@@ -7,3 +7,4 @@ resources:
   - metallb.yaml
   - ip-address-pool.yaml
   - nvidia-device-plugin.yaml
+  - nvidia-runtimeclass.yaml
