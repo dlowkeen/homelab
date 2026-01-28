@@ -20,10 +20,10 @@
 # Only pods with nvidia.com/gpu toleration will be able to schedule
 #
 # To apply:
-# kubectl taint nodes donovan-xps-8930 nvidia.com/gpu:NoSchedule --overwrite
+# kubectl taint nodes donovan-xps-8930-gpu nvidia.com/gpu:NoSchedule --overwrite
 #
 # To remove:
-# kubectl taint nodes donovan-xps-8930 nvidia.com/gpu:NoSchedule-
+# kubectl taint nodes donovan-xps-8930-gpu nvidia.com/gpu:NoSchedule-
 
 # Node Labels (apply these to enable node selectors)
 #
@@ -34,5 +34,5 @@
 # kubectl label node worker-01-optiplex-7050 node-type=worker --overwrite
 #
 # GPU Worker (Dell XPS 8930):
-# kubectl label node donovan-xps-8930 node-type=gpu --overwrite
+# kubectl label node donovan-xps-8930-gpu node-type=gpu --overwrite
 
