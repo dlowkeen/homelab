@@ -6,6 +6,8 @@ namespace: ollama
 resources:
   - namespace.yaml
   - pvc.yaml
+  - ui-pvc.yaml
+  - ui-secret.enc.yaml
   - deployment.yaml
   - service.yaml
   - ui-deployment.yaml

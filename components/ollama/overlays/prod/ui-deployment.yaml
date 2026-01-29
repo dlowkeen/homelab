@@ -13,6 +13,8 @@ spec:
       labels:
         app: ollama-ui
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-01-optiplex-7050
       containers:
       - name: ollama-ui
         image: ghcr.io/open-webui/open-webui:main
@@ -22,8 +24,11 @@ spec:
         env:
         - name: OLLAMA_BASE_URL
           value: "http://ollama:11434"
-        - name: WEBUI_AUTH
-          value: "False"  # Disable auth for homelab
+        - name: WEBUI_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ollama-ui-secret
+              key: webui-secret-key
         resources:
           limits:
             memory: 1Gi
@@ -48,4 +53,5 @@ spec:
           periodSeconds: 5
       volumes:
       - name: webui-data
-        emptyDir: {}  # Chat history stored in memory, resets on restart
+        persistentVolumeClaim:
+          claimName: ollama-ui-data  # Persist user accounts and chat history
