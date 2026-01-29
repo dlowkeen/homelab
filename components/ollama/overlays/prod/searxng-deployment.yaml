@@ -37,6 +37,7 @@ spec:
         volumeMounts:
         - name: searxng-config
           mountPath: /etc/searxng
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz
@@ -51,4 +52,5 @@ spec:
           periodSeconds: 5
       volumes:
       - name: searxng-config
-        emptyDir: {}  # Config will be generated on startup
+        configMap:
+          name: searxng-config

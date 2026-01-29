@@ -14,6 +14,7 @@ resources:
   - ui-service.yaml
   - ingress.yaml
   - searxng-secret.enc.yaml
+  - searxng-config.yaml
   - searxng-deployment.yaml
   - searxng-service.yaml
   - searxng-ingress.yaml
