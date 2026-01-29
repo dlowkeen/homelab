@@ -11,6 +11,7 @@ resources:
   - argocd/sync-prod.yaml
   - karakeep/sync-prod.yaml
   - immich/sync-prod.yaml
+  - ollama/sync-prod.yaml
 
   # App Secrets
   - threadwise/sync-prod.yaml
