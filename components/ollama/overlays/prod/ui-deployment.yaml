@@ -29,6 +29,13 @@ spec:
             secretKeyRef:
               name: ollama-ui-secret
               key: webui-secret-key
+        # Web Search Configuration
+        - name: ENABLE_RAG_WEB_SEARCH
+          value: "true"
+        - name: RAG_WEB_SEARCH_ENGINE
+          value: "searxng"
+        - name: SEARXNG_QUERY_URL
+          value: "http://searxng:8080/search?q=<query>&format=json"
         resources:
           limits:
             memory: 1Gi
