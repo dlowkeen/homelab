@@ -1,0 +1,25 @@
+---
+# Homelab node provisioning: base -> k8s_node -> gpu.
+# Run from ansible/: ansible-playbook playbooks/site.yml
+#
+# Ensure inventory/hosts.yml has real hostnames or ansible_host for each host,
+# and that you can SSH (key-based) to them. GPU hosts (e.g. Dell XPS 8930) must
+# be in both workers (or control_plane) and gpu_nodes so they get k8s_node + gpu.
+
+- name: Base setup (all nodes)
+  hosts: all
+  become: true
+  roles:
+    - base
+
+- name: Kubernetes node setup (control plane + workers, including GPU node)
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - k8s_node
+
+- name: GPU setup (nodes with NVIDIA GPU; must also be in k8s_nodes)
+  hosts: gpu_nodes
+  become: true
+  roles:
+    - gpu

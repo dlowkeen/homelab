@@ -1,0 +1,9 @@
+---
+- name: Restart sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+
+- name: Removed swap from fstab
+  ansible.builtin.debug:
+    msg: "Swap entry commented in fstab. Reboot or run 'swapoff -a' if swap was on."

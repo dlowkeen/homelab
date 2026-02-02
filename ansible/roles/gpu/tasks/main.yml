@@ -1,0 +1,92 @@
+---
+# gpu role: NVIDIA driver, container toolkit, containerd NVIDIA runtime.
+# From docs/learnings/2026-01-24-nvidia-gpu-setup.md.
+# Apply to hosts in gpu_nodes; those hosts must also be in k8s_nodes (workers/control_plane)
+# so they get containerd from k8s_node first.
+
+- name: Install ubuntu-drivers-common
+  ansible.builtin.apt:
+    name: ubuntu-drivers-common
+    state: present
+    update_cache: true
+
+- name: Install NVIDIA driver
+  ansible.builtin.apt:
+    name: "nvidia-driver-{{ nvidia_driver_version }}"
+    state: present
+    update_cache: true
+  notify: Reboot for NVIDIA driver
+  # Driver load requires reboot; handler can optionally reboot or just notify
+
+- name: Create keyrings directory for NVIDIA repo
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add NVIDIA container toolkit GPG key
+  ansible.builtin.shell: |
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  changed_when: true
+
+- name: Add NVIDIA container toolkit apt repository
+  ansible.builtin.shell: |
+    curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  args:
+    creates: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  changed_when: true
+
+- name: Install NVIDIA container toolkit
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    state: present
+    update_cache: true
+
+- name: Configure containerd for NVIDIA runtime
+  ansible.builtin.command: nvidia-ctk runtime configure --runtime=containerd
+  changed_when: true
+
+- name: Restart containerd to pick up NVIDIA runtime
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+
+- name: Install nerdctl (optional)
+  block:
+    - name: Download nerdctl tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/containerd/nerdctl/releases/download/v{{ nerdctl_version }}/nerdctl-{{ nerdctl_version }}-linux-amd64.tar.gz"
+        dest: "/tmp/nerdctl-{{ nerdctl_version }}-linux-amd64.tar.gz"
+        mode: "0644"
+        force: true
+
+    - name: Extract nerdctl to /usr/local/bin
+      ansible.builtin.unarchive:
+        src: "/tmp/nerdctl-{{ nerdctl_version }}-linux-amd64.tar.gz"
+        dest: /usr/local/bin
+        remote_src: true
+        creates: /usr/local/bin/nerdctl
+  when: nerdctl_version | length > 0
+
+- name: Switch to headless (multi-user.target, disable gdm3)
+  block:
+    - name: Set default target to multi-user
+      ansible.builtin.command: systemctl set-default multi-user.target
+      changed_when: true
+
+    - name: Disable gdm3 (display manager)
+      ansible.builtin.systemd:
+        name: gdm3
+        enabled: false
+        state: stopped
+      ignore_errors: true
+      # gdm3 may not be installed on server installs
+
+    - name: Notify reboot for headless
+      ansible.builtin.debug:
+        msg: "Headless mode set. Reboot to complete (e.g. 'sudo reboot')."
+  when: gpu_headless | bool

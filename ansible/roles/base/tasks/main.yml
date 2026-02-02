@@ -1,0 +1,39 @@
+---
+# Base role: common Ubuntu setup for every node (from docs/learnings/2026-01-26).
+# - Disable swap (required for kubelet)
+# - Ensure SSH server installed and enabled
+# - Common packages used by later roles
+
+- name: Install common packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: true
+
+- name: Ensure SSH server is installed and enabled
+  ansible.builtin.apt:
+    name: openssh-server
+    state: present
+  notify: Restart sshd
+
+- name: Ensure SSH service is started and enabled
+  ansible.builtin.service:
+    name: ssh
+    state: started
+    enabled: true
+
+- name: Disable swap permanently (required for kubelet)
+  ansible.builtin.shell: swapoff -a
+  changed_when: false
+  check_mode: false
+
+- name: Comment out swap entries in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+  notify: Removed swap from fstab

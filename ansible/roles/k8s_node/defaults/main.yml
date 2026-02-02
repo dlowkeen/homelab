@@ -1,0 +1,5 @@
+---
+# Kubernetes version for apt repo (e.g. v1.33)
+k8s_apt_version: "v1.33"
+# Hold kubeadm/kubelet/kubectl so apt upgrade does not upgrade them
+kube_hold_packages: true

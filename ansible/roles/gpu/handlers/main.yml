@@ -1,0 +1,4 @@
+---
+- name: Reboot for NVIDIA driver
+  ansible.builtin.debug:
+    msg: "NVIDIA driver installed. Reboot the host to load the driver (e.g. 'sudo reboot')."

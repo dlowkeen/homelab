@@ -1,0 +1,110 @@
+---
+# k8s_node role: prepare node for kubeadm join (containerd, kubelet, modules, sysctls).
+# From docs/learnings/2026-01-24-nvidia-gpu-setup.md (containerd) and standard K8s node prep.
+# Does not run kubeadm init/join; you do that manually or via a separate playbook.
+
+- name: Load kernel modules (br_netfilter, overlay)
+  ansible.builtin.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Ensure kernel modules load at boot
+  ansible.builtin.lineinfile:
+    path: "/etc/modules-load.d/k8s.conf"
+    line: "{{ item }}"
+    create: true
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Set sysctls for Kubernetes
+  ansible.builtin.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: "/etc/sysctl.d/99-k8s.conf"
+    reload: true
+  loop:
+    - { name: net.bridge.bridge-nf-call-iptables, value: "1" }
+    - { name: net.bridge.bridge-nf-call-ip6tables, value: "1" }
+    - { name: net.ipv4.ip_forward, value: "1" }
+
+- name: Install containerd
+  ansible.builtin.apt:
+    name: containerd
+    state: present
+    update_cache: true
+
+- name: Create containerd config directory
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: "0755"
+
+- name: Ensure containerd config exists (generate default if missing)
+  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+  changed_when: true
+
+- name: Set SystemdCgroup = true in containerd config (required for kubelet)
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: '(\s+)SystemdCgroup\s*=\s*false'
+    replace: '\1SystemdCgroup = true'
+  notify: Restart containerd
+
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Kubernetes apt signing key
+  ansible.builtin.shell: |
+    curl -fsSL "https://pkgs.k8s.io/core:/stable:{{ k8s_apt_version }}/deb/Release.key" | gpg --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  changed_when: true
+
+- name: Add Kubernetes apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:{{ k8s_apt_version }}/deb/ /"
+    filename: kubernetes
+    state: present
+    update_cache: true
+
+- name: Install kubeadm, kubelet, kubectl
+  ansible.builtin.apt:
+    name:
+      - kubeadm
+      - kubelet
+      - kubectl
+    state: present
+    update_cache: true
+
+- name: Hold kubeadm, kubelet, kubectl at current version
+  ansible.builtin.command: apt-mark hold {{ item }}
+  loop:
+    - kubeadm
+    - kubelet
+    - kubectl
+  when: kube_hold_packages | default(true) | bool
+  changed_when: false
+
+- name: Enable and start containerd
+  ansible.builtin.service:
+    name: containerd
+    state: started
+    enabled: true
+
+- name: Enable kubelet (will stay in crash/restart until kubeadm join)
+  ansible.builtin.service:
+    name: kubelet
+    state: started
+    enabled: true
+  ignore_errors: true
+  # kubelet often fails until the node has joined; enabled is what matters
