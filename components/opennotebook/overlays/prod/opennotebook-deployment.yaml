@@ -47,6 +47,9 @@ spec:
               key: OPENAI_API_KEY
         - name: API_URL
           value: "https://notebook.donovanlowkeen.com"
+        # Listen on all interfaces so ingress can reach the pod
+        - name: HOST
+          value: "0.0.0.0"
         envFrom:
         - secretRef:
             name: opennotebook-secret
@@ -54,6 +57,18 @@ spec:
         volumeMounts:
         - name: opennotebook-data
           mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8502
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8502
+          initialDelaySeconds: 30
+          periodSeconds: 10
         resources:
           requests:
             memory: 512Mi
