@@ -22,7 +22,22 @@ spec:
           - start
           - --log
           - info
+          - --user
+          - $(SURREAL_USER)
+          - --pass
+          - $(SURREAL_PASSWORD)
           - file:/data/mydata.db
+        env:
+        - name: SURREAL_USER
+          valueFrom:
+            secretKeyRef:
+              name: opennotebook-secret
+              key: SURREAL_USER
+        - name: SURREAL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opennotebook-secret
+              key: SURREAL_PASSWORD
         ports:
         - containerPort: 8000
           name: http
