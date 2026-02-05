@@ -15,21 +15,37 @@ Standardizes packages and config across Ubuntu nodes (control plane, workers, GP
 
 ## Usage
 
+From the `ansible/` directory you can use the **Makefile** or run commands directly:
+
 ```bash
 cd ansible
 
+# Show all targets
+make help
+
 # Check connectivity
-ansible all -m ping
+make ping
 
-# Run full provisioning (base -> k8s_node -> gpu)
-ansible-playbook playbooks/site.yml
+# Run full provisioning (all hosts)
+make run
 
-# Run only base role on all hosts
-ansible-playbook playbooks/site.yml --tags base
+# Run only on control-plane + worker-1 (skip gpu-node when it's unplugged)
+make run-nodes
 
-# Limit to one host (e.g. when adding a new node)
-ansible-playbook playbooks/site.yml --limit gpu-node
+# Run only on gpu-node
+make run-gpu
+
+# Run only base role
+make run-base
+
+# Dry run (no changes)
+make check
+
+# Prompt for sudo password when running playbook
+make run-with-password
 ```
+
+Or run Ansible directly, e.g. `ansible all -m ping`, `ansible-playbook playbooks/site.yml --limit control-plane,worker-1`.
 
 ## Roles
 

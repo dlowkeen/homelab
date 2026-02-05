@@ -3,3 +3,5 @@
 k8s_apt_version: "v1.33"
 # Hold kubeadm/kubelet/kubectl so apt upgrade does not upgrade them
 kube_hold_packages: true
+# containerd: leave empty to use repo default, or set e.g. "1.6.28-1" to pin (apt-cache policy containerd)
+containerd_version: "" # "1.7.28"
