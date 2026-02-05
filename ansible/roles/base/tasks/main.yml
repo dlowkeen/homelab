@@ -4,6 +4,17 @@
 # - Ensure SSH server installed and enabled
 # - Common packages used by later roles
 
+# Remove legacy Kubernetes apt repo (apt.kubernetes.io shut down March 2024) so apt update succeeds.
+# k8s_node role adds the correct pkgs.k8s.io repo.
+- name: Remove legacy Kubernetes apt repo (apt.kubernetes.io shut down 2024)
+  ansible.builtin.shell: |
+    for f in /etc/apt/sources.list.d/*; do
+      [ -f "$f" ] && grep -q 'apt.kubernetes.io' "$f" && rm -f "$f" && echo "removed"
+    done
+    true
+  register: legacy_k8s_removed
+  changed_when: "'removed' in legacy_k8s_removed.stdout"
+
 - name: Install common packages
   ansible.builtin.apt:
     name:
