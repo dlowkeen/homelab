@@ -13,3 +13,4 @@ resources:
   - opennotebook-service.yaml
   - ingress.yaml
   - opennotebook-secret.enc.yaml
+  - opennotebook-basic-auth.enc.yaml

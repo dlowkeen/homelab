@@ -5,6 +5,10 @@ metadata:
   namespace: opennotebook
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    # HTTP Basic Auth – secret must have key "auth" (htpasswd output)
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: opennotebook-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "OpenNotebook"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"

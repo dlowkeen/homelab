@@ -26,6 +26,22 @@ The example secret uses placeholder values. For a real deployment:
 
 Optional env vars (same secret, optional keys): `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, etc. See [OpenNotebook .env.example](https://github.com/lfnovo/open-notebook/blob/main/.env.example).
 
+## Basic Auth (ingress)
+
+The ingress is configured for HTTP Basic Auth so only people with a username/password can reach the app.
+
+1. Generate an htpasswd line (no `-c`; use `-n` for no file):
+   ```bash
+   htpasswd -nb youruser yourpassword
+   ```
+   Example output: `youruser:$apr1$...`
+
+2. Put that single line in the `auth` field of `opennotebook-basic-auth.example.yaml`, or create `opennotebook-basic-auth.enc.yaml` with the same structure and encrypt with SOPS.
+
+3. In `overlays/prod/kustomization.yaml`, use `opennotebook-basic-auth.enc.yaml` (or keep the example if you edited it in place).
+
+The example file has a placeholder; until you replace it with real htpasswd output, no one can log in (browser will prompt for credentials but they will be rejected).
+
 ## Architecture
 
 - **SurrealDB** – separate deployment and PVC for DB
