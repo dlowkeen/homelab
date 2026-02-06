@@ -46,14 +46,42 @@
     state: present
     update_cache: true
 
-- name: Configure containerd for NVIDIA runtime
+# Containerd NVIDIA runtime: imports + default_runtime_name set explicitly; nvidia block from nvidia-ctk.
+- name: Add conf.d imports to containerd config on GPU node
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: '^imports\s*=\s*\[\]'
+    replace: 'imports = ["/etc/containerd/conf.d/*.toml"]'
+  notify: Restart containerd
+
+- name: Set default_runtime_name to nvidia in containerd config
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'default_runtime_name\s*=\s*"[^"]*"'
+    replace: 'default_runtime_name = "nvidia"'
+  notify: Restart containerd
+
+# Let nvidia-ctk add the nvidia runtime block (correct indentation, no duplicate).
+- name: Configure containerd for NVIDIA runtime (nvidia-ctk)
   ansible.builtin.command: nvidia-ctk runtime configure --runtime=containerd
   changed_when: true
+  notify: Restart containerd
 
 - name: Restart containerd to pick up NVIDIA runtime
   ansible.builtin.service:
     name: containerd
     state: restarted
+  register: containerd_restart
+  ignore_errors: true
+
+- name: Warn if containerd failed to restart
+  ansible.builtin.debug:
+    msg: |
+      containerd failed to restart. Check config on gpu-node:
+        ssh gpu-node 'sudo journalctl -xeu containerd.service -n 20'
+      Fix /etc/containerd/config.toml (e.g. remove duplicate nvidia block at end), then:
+        ssh gpu-node 'sudo systemctl restart containerd'
+  when: containerd_restart is failed
 
 - name: Install nerdctl (optional)
   block:

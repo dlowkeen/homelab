@@ -1,0 +1,23 @@
+---
+# Fetch /etc/containerd/config.toml from all k8s nodes to local backups/.
+# Run from ansible/: make fetch-containerd-config
+# Result: backups/control-plane-containerd-config.toml, backups/worker-1-containerd-config.toml, backups/gpu-node-containerd-config.toml
+
+- name: Fetch containerd config from k8s nodes
+  hosts: k8s_nodes
+  gather_facts: false
+  tasks:
+    - name: Ensure backups directory exists on controller
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../backups"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Fetch containerd config.toml
+      ansible.builtin.fetch:
+        src: /etc/containerd/config.toml
+        dest: "{{ playbook_dir }}/../backups/{{ inventory_hostname }}-containerd-config.toml"
+        flat: true
+      become: true
