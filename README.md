@@ -2,6 +2,10 @@
 
 This is IaC for Donovan's homelab k8s cluster.
 
+## Operations Runbooks
+
+- Kubernetes cert renewal: `docs/k8s-cert-renewal.md`
+
 ## Managing Development Environments
 
 ### Immich Dev
