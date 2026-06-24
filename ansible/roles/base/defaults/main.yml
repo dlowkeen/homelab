@@ -1,0 +1,17 @@
+---
+# Manage host firewall baseline in this role.
+base_manage_firewall: true
+
+# If true, disable/mask nftables to avoid conflicting rule managers.
+base_disable_nftables: true
+
+# CIDR allowed to SSH and optionally access kube-apiserver.
+base_ssh_allowed_cidr: "192.168.1.0/24"
+
+# Toggle per-port allowances.
+base_allow_ssh: true
+base_allow_http: true
+base_allow_https: true
+
+# If true, allow port 6443 from base_ssh_allowed_cidr.
+base_allow_k8s_api: true

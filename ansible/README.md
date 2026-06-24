@@ -59,6 +59,16 @@ Or run Ansible directly, e.g. `ansible all -m ping`, `ansible-playbook playbooks
 
 - **k8s_node**: `roles/k8s_node/defaults/main.yml` — `k8s_apt_version` (e.g. `v1.31`), `kube_hold_packages`.
 - **gpu**: `roles/gpu/defaults/main.yml` — `nvidia_driver_version`, `nerdctl_version`, `gpu_headless` (set `true` for dedicated GPU nodes to switch to multi-user target and disable gdm3).
+- **base**: `roles/base/defaults/main.yml`
+  - `base_manage_firewall`: manage UFW/nftables baseline from Ansible.
+  - `base_disable_nftables`: disable/mask nftables to avoid conflict with UFW.
+  - `base_ssh_allowed_cidr`: CIDR allowed for SSH (and optional kube-apiserver).
+  - `base_allow_ssh`, `base_allow_http`, `base_allow_https`, `base_allow_k8s_api`: toggle exposed ports.
+
+### Firewall ownership note
+
+Use one host firewall manager consistently. This role assumes UFW is the primary manager when `base_manage_firewall: true`.
+If you intentionally manage nftables directly, set `base_manage_firewall: false` or override defaults per host/group.
 
 ## After provisioning
 

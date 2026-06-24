@@ -48,3 +48,94 @@
     regexp: '^([^#].*\sswap\s.*)$'
     replace: '# \1'
   notify: Removed swap from fstab
+
+# Avoid hidden nftables rules blocking SSH when UFW is inactive.
+- name: Ensure nftables package is absent
+  ansible.builtin.apt:
+    name: nftables
+    state: absent
+  when:
+    - base_manage_firewall | bool
+    - base_disable_nftables | bool
+
+- name: Disable nftables service if present
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: false
+    state: stopped
+  failed_when: false
+  when:
+    - base_manage_firewall | bool
+    - base_disable_nftables | bool
+
+- name: Mask nftables service if present
+  ansible.builtin.systemd:
+    name: nftables
+    masked: true
+  failed_when: false
+  when:
+    - base_manage_firewall | bool
+    - base_disable_nftables | bool
+
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  when: base_manage_firewall | bool
+
+- name: Set UFW default incoming policy
+  ansible.builtin.command: ufw default deny incoming
+  register: ufw_default_incoming
+  changed_when: "'Default incoming policy changed' in ufw_default_incoming.stdout"
+  when: base_manage_firewall | bool
+
+- name: Set UFW default outgoing policy
+  ansible.builtin.command: ufw default allow outgoing
+  register: ufw_default_outgoing
+  changed_when: "'Default outgoing policy changed' in ufw_default_outgoing.stdout"
+  when: base_manage_firewall | bool
+
+- name: Allow SSH from LAN CIDR
+  ansible.builtin.command: ufw allow from {{ base_ssh_allowed_cidr }} to any port 22 proto tcp
+  register: ufw_allow_ssh
+  changed_when: "'Rule added' in ufw_allow_ssh.stdout"
+  when:
+    - base_manage_firewall | bool
+    - base_allow_ssh | bool
+
+- name: Allow HTTP
+  ansible.builtin.command: ufw allow 80/tcp
+  register: ufw_allow_http
+  changed_when: "'Rule added' in ufw_allow_http.stdout"
+  when:
+    - base_manage_firewall | bool
+    - base_allow_http | bool
+
+- name: Allow HTTPS
+  ansible.builtin.command: ufw allow 443/tcp
+  register: ufw_allow_https
+  changed_when: "'Rule added' in ufw_allow_https.stdout"
+  when:
+    - base_manage_firewall | bool
+    - base_allow_https | bool
+
+- name: Allow Kubernetes API from LAN CIDR (optional)
+  ansible.builtin.command: ufw allow from {{ base_ssh_allowed_cidr }} to any port 6443 proto tcp
+  register: ufw_allow_k8s_api
+  changed_when: "'Rule added' in ufw_allow_k8s_api.stdout"
+  when:
+    - base_manage_firewall | bool
+    - base_allow_k8s_api | bool
+
+- name: Check UFW status
+  ansible.builtin.command: ufw status
+  register: ufw_status
+  changed_when: false
+  when: base_manage_firewall | bool
+
+- name: Enable UFW
+  ansible.builtin.command: ufw --force enable
+  changed_when: true
+  when:
+    - base_manage_firewall | bool
+    - "'Status: inactive' in ufw_status.stdout"

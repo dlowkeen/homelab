@@ -5,6 +5,7 @@ This is IaC for Donovan's homelab k8s cluster.
 ## Operations Runbooks
 
 - Kubernetes cert renewal: `docs/k8s-cert-renewal.md`
+- Incident postmortem (control-plane access + ingress outage, 2026-06-23): `docs/postmortem-2026-06-23-control-plane-access-and-ingress-outage.md`
 
 ## Managing Development Environments
 
