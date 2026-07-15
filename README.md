@@ -59,6 +59,10 @@ Dev is disabled to save on resources. It is just here to test version upgrades. 
 
 This section describes the node labels, taints, and scheduling preferences for the cluster.
 
+## Host Networking Layout
+
+Each node has one primary LAN NIC (`eno1` or `enp0s31f6`) plus Kubernetes-created CNI interfaces (`flannel.1`, `cni0`, `veth*`). Wi-Fi (`wlp2s0`) is intentionally down on the worker node to avoid multi-path routing issues.
+
 ## Node Labels
 
 Apply these labels to nodes:

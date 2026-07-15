@@ -23,3 +23,11 @@
   become: true
   roles:
     - gpu
+
+# Placeholder for future control-plane-only tasks.
+# Enable this when you add a dedicated roles/control_plane role.
+# - name: Control plane setup (future)
+#   hosts: control_plane
+#   become: true
+#   roles:
+#     - control_plane
