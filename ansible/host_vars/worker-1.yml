@@ -1,0 +1,11 @@
+# Worker host-specific network values.
+# Worker currently uses DHCP + UDM reservation per DR-001.
+
+primary_nic: enp0s31f6
+node_ipv4_address: 192.168.1.116/24
+node_ipv4_gateway: 192.168.1.1
+node_dns_servers:
+  - 192.168.1.1
+  - 1.1.1.1
+node_network_mode: dhcp_reserved
+

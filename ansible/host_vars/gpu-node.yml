@@ -1,0 +1,11 @@
+# GPU node host-specific network values.
+# GPU node currently planned for DHCP + reservation when online per DR-001.
+
+primary_nic: eno1
+node_ipv4_address: 192.168.1.34/24
+node_ipv4_gateway: 192.168.1.1
+node_dns_servers:
+  - 192.168.1.1
+  - 1.1.1.1
+node_network_mode: dhcp_reserved
+

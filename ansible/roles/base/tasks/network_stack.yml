@@ -1,0 +1,31 @@
+---
+# Optional network stack standardization (gated by vars in group_vars/host_vars).
+# Default is off to keep behavior unchanged until explicitly enabled.
+
+- name: Enable and start systemd-networkd
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: started
+    enabled: true
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Enable and start systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: started
+    enabled: true
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Disable and stop NetworkManager when using networkd
+  ansible.builtin.service:
+    name: NetworkManager
+    state: stopped
+    enabled: false
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+

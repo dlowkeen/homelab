@@ -1,0 +1,16 @@
+# Shared defaults for all homelab nodes.
+# Keep risky config-management toggles disabled by default; enable intentionally during rollout.
+
+# Network/firewall standardization feature gates
+manage_network_stack: false
+manage_firewall_stack: false
+disable_host_firewall_managers: true
+
+# Default networking assumptions (can be overridden per host)
+network_renderer: networkd
+primary_nic: eno1
+node_ipv4_gateway: 192.168.1.1
+node_dns_servers:
+  - 192.168.1.1
+  - 1.1.1.1
+
