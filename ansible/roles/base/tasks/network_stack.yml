@@ -2,6 +2,29 @@
 # Optional network stack standardization (gated by vars in group_vars/host_vars).
 # Default is off to keep behavior unchanged until explicitly enabled.
 
+- name: Render netplan config for primary NIC
+  ansible.builtin.template:
+    src: netplan-primary-nic.yaml.j2
+    dest: "{{ netplan_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Apply netplan config
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Remove legacy netplan files explicitly listed for cleanup
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ legacy_netplan_remove_paths | default([]) }}"
+  notify: Apply netplan config
+  when:
+    - manage_network_stack | default(false) | bool
+    - cleanup_legacy_netplan | default(false) | bool
+    - legacy_netplan_remove_paths | default([]) | length > 0
+
 - name: Enable and start systemd-networkd
   ansible.builtin.service:
     name: systemd-networkd

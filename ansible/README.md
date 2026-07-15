@@ -60,6 +60,9 @@ Or run Ansible directly, e.g. `ansible all -m ping`, `ansible-playbook playbooks
 - **base**: defined in `group_vars/all.yml` and optional `host_vars/*.yml`
   - `manage_network_stack` (default `false`) — enable network manager standardization tasks
   - `network_renderer` (default `networkd`) — target renderer when network stack management is enabled
+  - `netplan_config_path` (default `/etc/netplan/01-network-manager-all.yaml`) — authoritative netplan file managed by Ansible
+  - `cleanup_legacy_netplan` (default `false`) — remove explicitly listed legacy netplan files during migration
+  - `legacy_netplan_remove_paths` (default `[]`) — exact file paths to remove when cleanup is enabled
   - `manage_firewall_stack` (default `false`) — enable host firewall manager standardization tasks
   - `disable_host_firewall_managers` (default `true`) — disable/mask `ufw`, `nftables`, `netfilter-persistent`, `iptables-persistent` when firewall management is enabled
   - `primary_nic`, `node_ipv4_address`, `node_ipv4_gateway`, `node_dns_servers` — per-node addressing inputs for future templated network config

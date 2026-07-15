@@ -9,6 +9,9 @@ disable_host_firewall_managers: true
 # Default networking assumptions (can be overridden per host)
 network_renderer: networkd
 primary_nic: eno1
+netplan_config_path: /etc/netplan/01-network-manager-all.yaml
+cleanup_legacy_netplan: false
+legacy_netplan_remove_paths: []
 node_ipv4_gateway: 192.168.1.1
 node_dns_servers:
   - 192.168.1.1
