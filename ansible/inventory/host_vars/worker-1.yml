@@ -14,3 +14,5 @@ legacy_netplan_remove_paths:
   - /etc/netplan/90-NM-8b6b13b6-9ce9-43e5-bc0f-e05f1d7453b5.yaml
   - /etc/netplan/90-NM-ae13c984-139e-4cc9-8f8a-44bdbbdeffb9.yaml
 
+manage_network_stack: true
+manage_firewall_stack: true

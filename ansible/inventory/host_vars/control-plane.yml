@@ -6,4 +6,3 @@ node_ipv4_gateway: 192.168.1.1
 node_dns_servers:
   - 192.168.1.1
   - 1.1.1.1
-

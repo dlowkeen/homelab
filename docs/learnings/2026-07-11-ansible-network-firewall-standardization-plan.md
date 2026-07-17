@@ -158,6 +158,8 @@ Expected interpretation:
    - `manage_network_stack: false` initially
    - `manage_firewall_stack: false` initially
 
+Status: Completed. Gates are currently set in `ansible/group_vars/all.yml`, so network/firewall standardization tasks are no-op until intentionally enabled.
+
 ### Deliverable
 
 - PR/commit-ready Ansible changes that are still mostly gated off.
