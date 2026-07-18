@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: immich-postgresql
 spec:
-  replicas: 0  # Scaled down to save resources
+  replicas: 1  # Scaled down to save resources
   template:
     spec:
       containers:
