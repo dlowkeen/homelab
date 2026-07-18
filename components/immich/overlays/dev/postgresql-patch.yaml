@@ -10,9 +10,9 @@ spec:
       - name: postgresql
         resources:
           requests:
-            cpu: 50m
-            memory: 512Mi
-          limits:
             cpu: 200m
             memory: 1Gi
+          limits:
+            cpu: 500m
+            memory: 2Gi
 
