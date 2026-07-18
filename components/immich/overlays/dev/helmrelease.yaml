@@ -70,6 +70,16 @@ spec:
                     secretKeyRef:
                       name: immich-database-secret
                       key: DB_DATABASE_NAME
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_HOSTNAME
+                  value: immich-valkey
+              - op: add
+                path: /spec/template/spec/containers/0/env/-
+                value:
+                  name: REDIS_PORT
+                  value: "6379"
               # Fix mount path to match prod (/usr/src/app/upload) so database paths work
               - op: replace
                 path: /spec/template/spec/containers/0/volumeMounts/0/mountPath
@@ -113,7 +123,7 @@ spec:
 
     # Redis hostname in dev overlay
     env:
-      REDIS_HOSTNAME: immich-redis-master
+      REDIS_HOSTNAME: immich-valkey
       REDIS_PORT: "6379"
       IMMICH_SERVER_URL: https://immich-dev.donovanlowkeen.com
 

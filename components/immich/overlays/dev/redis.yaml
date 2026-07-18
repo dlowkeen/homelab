@@ -1,18 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: immich-redis
+  name: immich-valkey
   namespace: immich-dev
 spec:
-  replicas: 0  # Scaled down to save resources
+  replicas: 1
   selector:
     matchLabels:
-      app: redis
+      app: immich-valkey
   template:
     metadata:
       labels:
-        app: redis
+        app: immich-valkey
     spec:
+      # Force scheduling to worker node only (not control plane)
+      nodeSelector:
+        kubernetes.io/hostname: worker-01-optiplex-7050
       containers:
       - name: redis
         image: redis:7.2-alpine
@@ -20,20 +23,20 @@ spec:
         - containerPort: 6379
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            cpu: 200m
+            cpu: 100m
             memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: immich-redis-master
+  name: immich-valkey
   namespace: immich-dev
 spec:
   selector:
-    app: redis
+    app: immich-valkey
   ports:
   - port: 6379
     targetPort: 6379
@@ -42,12 +45,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: immich-redis-headless
+  name: immich-valkey-headless
   namespace: immich-dev
 spec:
   clusterIP: None
   selector:
-    app: redis
+    app: immich-valkey
   ports:
   - port: 6379
     targetPort: 6379
