@@ -1,0 +1,33 @@
+---
+# Optional host firewall manager standardization (gated).
+# K8s/CNI can still manage dynamic netfilter rules at runtime.
+
+- name: Disable and stop host firewall manager services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - ufw
+    - nftables
+    - netfilter-persistent
+    - iptables-persistent
+  failed_when: false
+  when:
+    - manage_firewall_stack | default(false) | bool
+    - disable_host_firewall_managers | default(true) | bool
+
+- name: Mask host firewall manager services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: true
+  loop:
+    - ufw
+    - nftables
+    - netfilter-persistent
+    - iptables-persistent
+  failed_when: false
+  when:
+    - manage_firewall_stack | default(false) | bool
+    - disable_host_firewall_managers | default(true) | bool
+

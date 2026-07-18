@@ -1,0 +1,18 @@
+# Worker host-specific network values.
+# Worker currently uses DHCP + UDM reservation per DR-001.
+
+primary_nic: enp0s31f6
+node_ipv4_address: 192.168.1.116/24
+node_ipv4_gateway: 192.168.1.1
+node_dns_servers:
+  - 192.168.1.1
+  - 1.1.1.1
+node_network_mode: dhcp_reserved
+cleanup_legacy_netplan: true
+legacy_netplan_remove_paths:
+  - /etc/netplan/50-cloud-init.yaml
+  - /etc/netplan/90-NM-8b6b13b6-9ce9-43e5-bc0f-e05f1d7453b5.yaml
+  - /etc/netplan/90-NM-ae13c984-139e-4cc9-8f8a-44bdbbdeffb9.yaml
+
+manage_network_stack: true
+manage_firewall_stack: true

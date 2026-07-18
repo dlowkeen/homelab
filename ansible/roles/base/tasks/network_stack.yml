@@ -1,0 +1,106 @@
+# Optional network stack standardization (gated by vars in group_vars/host_vars).
+# Default is off to keep behavior unchanged until explicitly enabled.
+
+- name: Render netplan config for primary NIC
+  ansible.builtin.template:
+    src: netplan-primary-nic.yaml.j2
+    dest: "{{ netplan_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  register: netplan_primary_render
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Remove legacy netplan files explicitly listed for cleanup
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ legacy_netplan_remove_paths | default([]) }}"
+  register: netplan_legacy_cleanup
+  when:
+    - manage_network_stack | default(false) | bool
+    - cleanup_legacy_netplan | default(false) | bool
+    - legacy_netplan_remove_paths | default([]) | length > 0
+
+- name: Assert primary NIC variable is provided
+  ansible.builtin.assert:
+    that:
+      - primary_nic is defined
+      - primary_nic | length > 0
+    fail_msg: >-
+      manage_network_stack is enabled, but primary_nic is not set for this host.
+      Set primary_nic in host_vars before attempting network cutover.
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Assert primary NIC exists in discovered interfaces
+  ansible.builtin.assert:
+    that:
+      - primary_nic in ansible_interfaces
+    fail_msg: >-
+      primary_nic '{{ primary_nic }}' was not found in discovered interfaces
+      ({{ ansible_interfaces | join(', ') }}). Aborting cutover to avoid loss of connectivity.
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Assert SSH target host is defined for reconnect wait
+  ansible.builtin.assert:
+    that:
+      - ansible_host is defined
+      - ansible_host | length > 0
+    fail_msg: >-
+      ansible_host is not defined for this host. Define ansible_host so wait_for_connection
+      can reliably verify recovery after network cutover.
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Enable and start systemd-networkd
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: started
+    enabled: true
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Enable and start systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: started
+    enabled: true
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+
+- name: Apply netplan changes asynchronously (can briefly drop SSH)
+  ansible.builtin.shell: netplan generate && netplan apply
+  async: 120
+  poll: 0
+  changed_when: false
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+    - (netplan_primary_render is changed) or (netplan_legacy_cleanup is changed)
+
+- name: Wait for host to reconnect after netplan apply
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 180
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'
+    - (netplan_primary_render is changed) or (netplan_legacy_cleanup is changed)
+
+- name: Disable and stop NetworkManager when using networkd
+  ansible.builtin.service:
+    name: NetworkManager
+    state: stopped
+    enabled: false
+  when:
+    - manage_network_stack | default(false) | bool
+    - network_renderer | default('networkd') == 'networkd'

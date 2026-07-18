@@ -7,3 +7,7 @@
 - name: Removed swap from fstab
   ansible.builtin.debug:
     msg: "Swap entry commented in fstab. Reboot or run 'swapoff -a' if swap was on."
+
+- name: Apply netplan config
+  ansible.builtin.command: netplan generate && netplan apply
+  changed_when: false

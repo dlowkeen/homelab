@@ -1,0 +1,15 @@
+---
+# Swap must be disabled for kubelet stability.
+
+- name: Disable swap permanently (required for kubelet)
+  ansible.builtin.shell: swapoff -a
+  changed_when: false
+  check_mode: false
+
+- name: Comment out swap entries in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+  notify: Removed swap from fstab
+

@@ -4,47 +4,32 @@
 # - Ensure SSH server installed and enabled
 # - Common packages used by later roles
 
-# Remove legacy Kubernetes apt repo (apt.kubernetes.io shut down March 2024) so apt update succeeds.
-# k8s_node role adds the correct pkgs.k8s.io repo.
-- name: Remove legacy Kubernetes apt repo (apt.kubernetes.io shut down 2024)
-  ansible.builtin.shell: |
-    for f in /etc/apt/sources.list.d/*; do
-      [ -f "$f" ] && grep -q 'apt.kubernetes.io' "$f" && rm -f "$f" && echo "removed"
-    done
-    true
-  register: legacy_k8s_removed
-  changed_when: "'removed' in legacy_k8s_removed.stdout"
+- name: Base packages and apt cleanup
+  ansible.builtin.import_tasks: packages.yml
+  tags:
+    - base
+    - packages
 
-- name: Install common packages
-  ansible.builtin.apt:
-    name:
-      - ca-certificates
-      - curl
-      - gnupg
-      - lsb-release
-    state: present
-    update_cache: true
+- name: SSH baseline
+  ansible.builtin.import_tasks: ssh.yml
+  tags:
+    - base
+    - ssh
 
-- name: Ensure SSH server is installed and enabled
-  ansible.builtin.apt:
-    name: openssh-server
-    state: present
-  notify: Restart sshd
+- name: Swap baseline
+  ansible.builtin.import_tasks: swap.yml
+  tags:
+    - base
+    - swap
 
-- name: Ensure SSH service is started and enabled
-  ansible.builtin.service:
-    name: ssh
-    state: started
-    enabled: true
+- name: Optional network stack management
+  ansible.builtin.import_tasks: network_stack.yml
+  tags:
+    - base
+    - network
 
-- name: Disable swap permanently (required for kubelet)
-  ansible.builtin.shell: swapoff -a
-  changed_when: false
-  check_mode: false
-
-- name: Comment out swap entries in /etc/fstab
-  ansible.builtin.replace:
-    path: /etc/fstab
-    regexp: '^([^#].*\sswap\s.*)$'
-    replace: '# \1'
-  notify: Removed swap from fstab
+- name: Optional firewall stack management
+  ansible.builtin.import_tasks: firewall_stack.yml
+  tags:
+    - base
+    - firewall

@@ -158,6 +158,8 @@ Expected interpretation:
    - `manage_network_stack: false` initially
    - `manage_firewall_stack: false` initially
 
+Status: Completed. Gates are currently set in `ansible/group_vars/all.yml`, so network/firewall standardization tasks are no-op until intentionally enabled.
+
 ### Deliverable
 
 - PR/commit-ready Ansible changes that are still mostly gated off.
@@ -316,6 +318,7 @@ Stop immediately if any of the following occurs:
 ### Objectives
 
 - Bring GPU node in line when it is online, without blocking other progress.
+- Keep GPU node on DHCP with reservation (same model as `worker-1`) to preserve stable `ansible_host`.
 
 ### Tasks
 
@@ -327,6 +330,7 @@ Stop immediately if any of the following occurs:
    ```
 2. Validate network/firewall/service baseline.
 3. Reboot and verify persistence.
+4. Confirm router DHCP reservation exists for the GPU node primary NIC MAC and matches `ansible_host`.
 
 ---
 
@@ -365,6 +369,8 @@ node_dns_servers:
 ```
 
 Do the same for `worker-1` and `gpu-node`.
+
+For `worker-1` and `gpu-node`, set `node_network_mode: dhcp_reserved` in host vars and ensure the router has matching DHCP reservations.
 
 ---
 
