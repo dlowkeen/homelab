@@ -63,6 +63,17 @@ This section describes the node labels, taints, and scheduling preferences for t
 
 Each node has one primary LAN NIC (`eno1` or `enp0s31f6`) plus Kubernetes-created CNI interfaces (`flannel.1`, `cni0`, `veth*`). Wi-Fi (`wlp2s0`) is intentionally down on the worker node to avoid multi-path routing issues.
 
+### DHCP Reservations (Important)
+
+`worker-1` uses DHCP on `enp0s31f6`, but it should have a DHCP reservation on the router so `ansible_host` stays stable across reboots.
+
+- Host: `worker-1` (`worker-01-optiplex-7050`)
+- Interface: `enp0s31f6`
+- MAC: `14:b3:1f:2a:1d:26`
+- Reserved IP: `192.168.1.116`
+
+If the reservation is missing, the node can come back on a different IP after reboot, which breaks SSH and Ansible until inventory is updated.
+
 ## Node Labels
 
 Apply these labels to nodes:
