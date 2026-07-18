@@ -8,8 +8,7 @@ spec:
     spec:
       containers:
       - name: postgresql
-        # v3 migration-safe image: includes VectorChord + pgvecto.rs compatibility
-        image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+        image: tensorchord/pgvecto-rs:pg14-v0.2.0
         resources:
           requests:
             cpu: 200m
