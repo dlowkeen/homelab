@@ -130,8 +130,8 @@ kubectl run -it --rm verify-restore \
 
 ```
 immich-backups/
-├── manifest.json                    # Current backup manifest
-├── manifest-{timestamp}.json        # Historical manifests
+├── manifest.db                      # Current backup manifest (SQLite)
+├── manifest-{timestamp}.db          # Historical manifest snapshots (SQLite)
 ├── library/
 │   └── {preserved-immich-structure}/
 │       └── {files}
