@@ -59,7 +59,7 @@ spec:
               value: /etc/gcs/credentials.json
             # Immich version
             - name: IMMICH_VERSION
-              value: "v2.3.1"
+              value: "v3.0.3"
             # Backup configuration
             - name: DB_BACKUP_RETENTION
               value: "5"

@@ -10,6 +10,7 @@ spec:
         kubernetes.io/hostname: worker-01-optiplex-7050
       containers:
       - name: postgresql
+        image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
         resources:
           requests:
             cpu: 100m

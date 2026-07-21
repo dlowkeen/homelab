@@ -27,9 +27,9 @@ spec:
         # Override the image to ensure correct version is used
         images:
           - name: ghcr.io/immich-app/immich-server
-            newTag: v2.3.1
+            newTag: v3.0.3
           - name: ghcr.io/immich-app/immich-machine-learning
-            newTag: v2.3.1
+            newTag: v3.0.3
         patches:
           # Patch immich-server deployment to add DB env vars
           - target:
@@ -143,7 +143,7 @@ spec:
     machine-learning:
       enabled: true
       image:
-        tag: "v2.3.1"  # Match server version
+        tag: "v3.0.3"  # Match server version
       resources:
         requests:
           memory: "1Gi"
