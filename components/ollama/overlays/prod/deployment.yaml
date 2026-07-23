@@ -17,9 +17,9 @@ spec:
     spec:
       # Use nvidia runtime for GPU access
       runtimeClassName: nvidia
-      # Schedule on GPU node
+      # Schedule on any node labeled for NVIDIA workloads.
       nodeSelector:
-        kubernetes.io/hostname: donovan-xps-8930-gpu
+        accelerator: nvidia
       # Tolerate GPU taint
       tolerations:
       - key: nvidia.com/gpu
