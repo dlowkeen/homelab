@@ -87,7 +87,7 @@ kubectl label node donovan-optiplex-9020m node-type=control-plane --overwrite
 kubectl label node worker-01-optiplex-7050 node-type=worker --overwrite
 
 # GPU worker node (Dell XPS 8930)
-kubectl label node donovan-xps-8930 node-type=gpu --overwrite
+kubectl label node donovan-xps-8930 accelerator=nvidia --overwrite
 ```
 
 ## Node Taints (Optional)
