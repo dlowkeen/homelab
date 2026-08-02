@@ -61,6 +61,7 @@ spec:
         proxy-connect-timeout: "600"
         proxy-send-timeout: "600"
         proxy-read-timeout: "600"
+        client-body-timeout: "600"
         # Increase buffer sizes
         client-body-buffer-size: "128k"
         proxy-buffer-size: "4k"
