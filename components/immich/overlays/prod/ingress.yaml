@@ -6,6 +6,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "10g"
+    nginx.ingress.kubernetes.io/client-body-buffer-size: "16m"
     # Stream large uploads directly to Immich to avoid request-body buffering timeouts.
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
