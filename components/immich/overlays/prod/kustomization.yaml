@@ -12,6 +12,7 @@ resources:
   - pvc-postgresql.yaml
   - pvc-bigboi.yaml
   - ingress.yaml
+  - ingress-lan.yaml
   - redis.yaml
   - postgresql-service-patch.yaml
   - gcs-secrets.enc.yaml
