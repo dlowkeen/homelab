@@ -36,6 +36,9 @@ spec:
               kind: Deployment
               name: immich-server
             patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
               - op: add
                 path: /spec/template/spec/containers/0/env/-
                 value:
@@ -101,6 +104,9 @@ spec:
               kind: Deployment
               name: immich-microservices
             patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
               - op: add
                 path: /spec/template/spec/nodeSelector
                 value:
@@ -110,6 +116,9 @@ spec:
               kind: Deployment
               name: immich-machine-learning
             patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
               - op: add
                 path: /spec/template/spec/nodeSelector
                 value:

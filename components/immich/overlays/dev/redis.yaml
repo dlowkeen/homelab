@@ -4,7 +4,7 @@ metadata:
   name: immich-valkey
   namespace: immich-dev
 spec:
-  replicas: 1
+  replicas: 0  # Scaled down to save resources
   selector:
     matchLabels:
       app: immich-valkey
